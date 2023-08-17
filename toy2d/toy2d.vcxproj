@@ -131,16 +131,24 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="include\swapchain.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="src\context.cpp" />
+    <ClCompile Include="src\shader.cpp" />
+    <ClCompile Include="src\swapchain.cpp" />
+    <ClCompile Include="src\tool.cpp" />
     <ClCompile Include="src\toy2d.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\context.h" />
+    <ClInclude Include="include\shader.h" />
     <ClInclude Include="include\swapchain.h" />
     <ClInclude Include="include\tool.h" />
     <ClInclude Include="include\toy2d.h" />
+    <ClInclude Include="resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="shader\shader.frag" />
+    <None Include="shader\shader.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -30,7 +30,13 @@
     <ClCompile Include="src\toy2d.cpp">
       <Filter>源文件\toy2d</Filter>
     </ClCompile>
-    <ClCompile Include="include\swapchain.cpp">
+    <ClCompile Include="src\swapchain.cpp">
+      <Filter>源文件\toy2d</Filter>
+    </ClCompile>
+    <ClCompile Include="src\shader.cpp">
+      <Filter>源文件\toy2d</Filter>
+    </ClCompile>
+    <ClCompile Include="src\tool.cpp">
       <Filter>源文件\toy2d</Filter>
     </ClCompile>
   </ItemGroup>
@@ -47,5 +53,19 @@
     <ClInclude Include="include\swapchain.h">
       <Filter>头文件\toy2d</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="include\shader.h">
+      <Filter>头文件\toy2d</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="shader\shader.frag">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="shader\shader.vert">
+      <Filter>资源文件</Filter>
+    </None>
   </ItemGroup>
 </Project>
