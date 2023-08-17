@@ -113,6 +113,14 @@
       <AdditionalLibraryDirectories>D:\Vulkan\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>vulkan-1.lib;SDL2.lib;SDL2main.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PreBuildEvent>
+      <Command>
+      </Command>
+    </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>
+      </Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -129,10 +137,19 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PreBuildEvent>
+      <Command>
+      </Command>
+    </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>
+      </Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="src\context.cpp" />
+    <ClCompile Include="src\render_process.cpp" />
     <ClCompile Include="src\shader.cpp" />
     <ClCompile Include="src\swapchain.cpp" />
     <ClCompile Include="src\tool.cpp" />
@@ -140,11 +157,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\context.h" />
+    <ClInclude Include="include\render_process.h" />
     <ClInclude Include="include\shader.h" />
     <ClInclude Include="include\swapchain.h" />
     <ClInclude Include="include\tool.h" />
     <ClInclude Include="include\toy2d.h" />
-    <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shader\shader.frag" />

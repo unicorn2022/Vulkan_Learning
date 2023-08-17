@@ -7,6 +7,7 @@
 #include <optional>
 #include "tool.h"
 #include "swapchain.h"
+#include "render_process.h"
 
 namespace toy2d {
 
@@ -47,7 +48,8 @@ public:
 	vk::Queue presentQueue;			// 图像显示命令队列
 	vk::SurfaceKHR surface;			// surface扩展, 用于GPU绘制图像
 
-	std::unique_ptr<Swapchain> swapchain; // 交换链
+	std::unique_ptr<Swapchain> swapchain;			// 交换链
+	std::unique_ptr<RenderProcess> renderProcess;	// 渲染管线
 
 private:
 	Context(const std::vector<const char*> extensions, CreateSurfaceFunc func);

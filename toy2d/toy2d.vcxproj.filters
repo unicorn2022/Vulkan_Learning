@@ -39,6 +39,9 @@
     <ClCompile Include="src\tool.cpp">
       <Filter>源文件\toy2d</Filter>
     </ClCompile>
+    <ClCompile Include="src\render_process.cpp">
+      <Filter>源文件\toy2d</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\context.h">
@@ -53,10 +56,10 @@
     <ClInclude Include="include\swapchain.h">
       <Filter>头文件\toy2d</Filter>
     </ClInclude>
-    <ClInclude Include="resource.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="include\shader.h">
+      <Filter>头文件\toy2d</Filter>
+    </ClInclude>
+    <ClInclude Include="include\render_process.h">
       <Filter>头文件\toy2d</Filter>
     </ClInclude>
   </ItemGroup>

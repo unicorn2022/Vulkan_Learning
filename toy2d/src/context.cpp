@@ -34,6 +34,8 @@ Context::Context(const std::vector<const char*> extensions, CreateSurfaceFunc fu
 	createDevice();
 	// 获取命令队列
 	getQueues();
+	// 初始化渲染管线
+	renderProcess.reset(new RenderProcess());
 }
 
 Context::~Context() {
