@@ -5,13 +5,15 @@ namespace toy2d {
 		Context::Init(extensions, func);
 		Context::GetInstance().InitSwapchain(w, h);
 		Shader::Init(ReadWholeFile("./shader/vert.spv"), ReadWholeFile("./shader/frag.spv"));
+		Context::GetInstance().renderProcess->InitRenderPass();
+		Context::GetInstance().renderProcess->InitLayout();
 		Context::GetInstance().renderProcess->InitPipeline(w, h);
 	}
 
 	void Quit() {
-		Context::GetInstance().renderProcess->DestoryPipline();
-		Shader::Quit();
+		Context::GetInstance().renderProcess.reset();
 		Context::GetInstance().DestroySwapchain();
+		Shader::Quit();
 		Context::Quit();
 	}
 }

@@ -1,9 +1,54 @@
 #include "render_process.h"
 #include "shader.h"
 #include "context.h"
+#include "swapchain.h"
 
 namespace toy2d {
+
+void RenderProcess::InitLayout() {
+	vk::PipelineLayoutCreateInfo createInfo;
+	layout = Context::GetInstance().device.createPipelineLayout(createInfo);
+}
+
+void RenderProcess::InitRenderPass() {
+	vk::RenderPassCreateInfo createInfo;
+	/* 附件描述 */
+	vk::AttachmentDescription attachDesc;
+	attachDesc.setFormat(Context::GetInstance().swapchain->info.format.format)
+		.setInitialLayout(vk::ImageLayout::eUndefined)
+		.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal)
+		.setLoadOp(vk::AttachmentLoadOp::eClear)			// 颜色缓冲: 加载时清空
+		.setStoreOp(vk::AttachmentStoreOp::eStore)			// 颜色缓冲: 存储时保留	
+		.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)	// 模板缓冲
+		.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)// 模板缓冲
+		.setSamples(vk::SampleCountFlagBits::e1);			// 采样数量
+	createInfo.setAttachments(attachDesc);
+
+	/* 子通道描述 */
+	vk::AttachmentReference reference;
+	reference.setLayout(vk::ImageLayout::eColorAttachmentOptimal) // 图像布局
+		.setAttachment(0); // 附件索引
+
+	vk::SubpassDescription subpass;
+	subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics) // 绑定在哪一类流水线上
+		.setColorAttachments(reference); // 颜色附件
+	createInfo.setSubpasses(subpass);
+	
+	/* 子通道依赖 */
+	vk::SubpassDependency dependency;
+	dependency.setSrcSubpass(VK_SUBPASS_EXTERNAL)	// 先执行的子通道: 外部通道
+		.setDstSubpass(0)							// 后执行的子通道: 0号子通道
+		.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite) // 子通道的访问权限
+		.setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)		
+		.setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput); // 子通道计算后的图像的应用场景
+	createInfo.setDependencies(dependency);
+
+	/* 创建渲染流程 */
+	renderPass = Context::GetInstance().device.createRenderPass(createInfo);
+}
+
 void RenderProcess::InitPipeline(int width, int height) {
+	/* 流水线配置 */
 	vk::GraphicsPipelineCreateInfo createInfo;
 
 	// 1. 顶点输入
@@ -36,8 +81,7 @@ void RenderProcess::InitPipeline(int width, int height) {
 		.setCullMode(vk::CullModeFlagBits::eBack)		// 剔除背面
 		.setFrontFace(vk::FrontFace::eCounterClockwise) // 设置正面方向: 逆时针
 		.setPolygonMode(vk::PolygonMode::eFill)			// 多边形填充模式: 填充
-		.setLineWidth(1.0f)								// 线宽
-		.setDepthClampEnable(false);					// 深度剔除
+		.setLineWidth(1.0f);							// 线宽
 	createInfo.setPRasterizationState(&rastInfo);
 
 	// 6. 多重采样
@@ -58,9 +102,15 @@ void RenderProcess::InitPipeline(int width, int height) {
 			vk::ColorComponentFlagBits::eR); // 颜色写入掩码
 	vk::PipelineColorBlendStateCreateInfo blend;
 	blend.setLogicOpEnable(false)	// 是否启用逻辑运算
-		.setPAttachments(&attachs); // 颜色混合附件
+		.setAttachments(attachs);	// 颜色混合附件
 	createInfo.setPColorBlendState(&blend);
 
+	// 9. render pass & layout
+	createInfo.setRenderPass(renderPass)
+		.setLayout(layout);
+
+
+	/* 创建 pipeline */
 	auto result = Context::GetInstance().device.createGraphicsPipeline(nullptr, createInfo);
 	if (result.result != vk::Result::eSuccess) {
 		throw std::runtime_error("create graphics pipeline failed");
@@ -68,7 +118,10 @@ void RenderProcess::InitPipeline(int width, int height) {
 	pipeline = result.value;
 }
 
-void RenderProcess::DestoryPipline() {
-	Context::GetInstance().device.destroyPipeline(pipeline);
+RenderProcess::~RenderProcess() {
+	auto& device = Context::GetInstance().device;
+	device.destroyRenderPass(renderPass);
+	device.destroyPipelineLayout(layout);
+	device.destroyPipeline(pipeline);
 }
 }

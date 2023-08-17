@@ -6,10 +6,15 @@ namespace toy2d {
 
 class RenderProcess final {
 public:
+	void InitLayout();
+	void InitRenderPass();
 	void InitPipeline(int width, int height);
-	void DestoryPipline();
+
+	~RenderProcess();
 
 public:
-	vk::Pipeline pipeline;
+	vk::Pipeline pipeline;		// 渲染管线
+	vk::PipelineLayout layout;	// uniform布局
+	vk::RenderPass renderPass;	// 渲染通道
 };
 }
