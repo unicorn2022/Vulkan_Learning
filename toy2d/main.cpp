@@ -62,6 +62,6 @@ void MainLoop() {
                 shouldClose = true;
             }
         }
-		renderer.Render();
+		renderer.DrawTriangle();
     }
 }

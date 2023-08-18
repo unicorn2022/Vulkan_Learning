@@ -6,11 +6,11 @@ namespace toy2d {
 
 class Renderer final {
 public:
-	Renderer();
+	Renderer(int maxFlightCount = 2);
 	~Renderer();
 
 	// 进行每一帧的渲染
-	void Render();
+	void DrawTriangle();
 
 
 private:
@@ -20,12 +20,15 @@ private:
 	void createFence();
 
 private:
-	vk::CommandPool commandPool;		// 命令池
-	vk::CommandBuffer commandBuffer;	// 命令缓冲区
+	int maxFlightCount;
+	int curFrame;
 
-	vk::Semaphore imageAvaliable;		// 图片是否可用的信号量
-	vk::Semaphore imageDrawFinish;		// 图片是否绘制完成的信号量
-	vk::Fence commandAvailableFence;	// 命令缓冲区是否可用的信号量
+	vk::CommandPool commandPool;	// 命令池
+	std::vector<vk::Fence> fences;	// 命令缓冲区是否可用的信号量
+
+	std::vector<vk::Semaphore> imageAvaliableSemaphore;	// 图片是否可用的信号量
+	std::vector<vk::Semaphore> imageDrawFinishSemaphore;// 图片是否绘制完成的信号量
+	std::vector<vk::CommandBuffer> commandBuffer;	// 命令缓冲区
 
 
 };
