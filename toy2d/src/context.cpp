@@ -9,14 +9,6 @@ void Context::Init(const std::vector<const char*> extensions, CreateSurfaceFunc 
 	m_instance.reset(new Context(extensions, func));
 }
 
-void Context::InitSwapchain(int w, int h) {
-	// 创建交换链
-	swapchain.reset(new Swapchain(w, h));
-}
-void Context::DestroySwapchain() {
-	// 销毁交换链
-	swapchain.reset();
-}
 void Context::Quit() {
 	m_instance.reset();
 }
@@ -50,8 +42,7 @@ Context::~Context() {
 void Context::createInstance(const std::vector<const char*> extensions) {
 	// 应用程序配置
 	vk::ApplicationInfo appInfo;
-	appInfo.setApiVersion(VK_API_VERSION_1_3)
-		.setPApplicationName("toy2D");
+	appInfo.setApiVersion(VK_API_VERSION_1_3);
 
 	// 实例配置, 开启验证层
 	const std::vector<const char*> layers = { "VK_LAYER_KHRONOS_validation" };

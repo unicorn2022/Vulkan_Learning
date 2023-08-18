@@ -32,8 +32,6 @@ int main(int argc, char* argv[]) {
 		std::cout << extension << ", ";
 	std::cout << "\n";
 
-	// 创建能够显示在窗口上的surface
-
 
 	// 开启渲染循环
 	toy2d::Init(extensions, 
@@ -57,11 +55,13 @@ void MainLoop() {
     bool shouldClose = false;
     SDL_Event event;
 
+	auto& renderer = toy2d::GetRenderer();
     while (!shouldClose) {
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
                 shouldClose = true;
             }
         }
+		renderer.Render();
     }
 }

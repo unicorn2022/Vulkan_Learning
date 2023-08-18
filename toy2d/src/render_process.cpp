@@ -16,7 +16,7 @@ void RenderProcess::InitRenderPass() {
 	vk::AttachmentDescription attachDesc;
 	attachDesc.setFormat(Context::GetInstance().swapchain->info.format.format)
 		.setInitialLayout(vk::ImageLayout::eUndefined)
-		.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal)
+		.setFinalLayout(vk::ImageLayout::ePresentSrcKHR)
 		.setLoadOp(vk::AttachmentLoadOp::eClear)			// 颜色缓冲: 加载时清空
 		.setStoreOp(vk::AttachmentStoreOp::eStore)			// 颜色缓冲: 存储时保留	
 		.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)	// 模板缓冲
@@ -77,11 +77,11 @@ void RenderProcess::InitPipeline(int width, int height) {
 
 	// 5. 光栅化
 	vk::PipelineRasterizationStateCreateInfo rastInfo;
-	rastInfo.setRasterizerDiscardEnable(false)			// 是否忽略光栅化结果
-		.setCullMode(vk::CullModeFlagBits::eBack)		// 剔除背面
-		.setFrontFace(vk::FrontFace::eCounterClockwise) // 设置正面方向: 逆时针
-		.setPolygonMode(vk::PolygonMode::eFill)			// 多边形填充模式: 填充
-		.setLineWidth(1.0f);							// 线宽
+	rastInfo.setRasterizerDiscardEnable(false)		// 是否忽略光栅化结果
+		.setCullMode(vk::CullModeFlagBits::eBack)	// 剔除背面
+		.setFrontFace(vk::FrontFace::eClockwise)	// 设置正面方向: 顺时针
+		.setPolygonMode(vk::PolygonMode::eFill)		// 多边形填充模式: 填充
+		.setLineWidth(1.0f);						// 线宽
 	createInfo.setPRasterizationState(&rastInfo);
 
 	// 6. 多重采样
