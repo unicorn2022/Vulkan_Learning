@@ -41,12 +41,18 @@ Swapchain::Swapchain(int w, int h) {
 }
 
 Swapchain::~Swapchain() {
+	auto& device = Context::GetInstance().device;
+
+	// 销毁帧缓冲
+	for (auto& framebuffer : framebuffers)
+		device.destroyFramebuffer(framebuffer);
+
 	// 销毁图像视图
 	for (auto& view : imageViews) 
-		Context::GetInstance().device.destroyImageView(view);
+		device.destroyImageView(view);
 
 	// 销毁交换链
-	Context::GetInstance().device.destroySwapchainKHR(swapchain);
+	device.destroySwapchainKHR(swapchain);
 }
 
 void Swapchain::queryInfo(int w, int h) {
@@ -116,6 +122,19 @@ void Swapchain::createImageViews() {
 
 		/* 创建视图 */
 		imageViews[i] = Context::GetInstance().device.createImageView(createInfo);
+	}
+}
+void Swapchain::createFramebuffers(int w, int h) {
+	framebuffers.resize(images.size());
+	for (int i = 0; i < framebuffers.size(); i++) {
+		vk::FramebufferCreateInfo createInfo;
+		createInfo.setAttachments(imageViews[i]) // 附件: 第i个image
+			.setWidth(w)
+			.setHeight(h)
+			.setRenderPass(Context::GetInstance().renderProcess->renderPass) // 绘制流程: 在renderpass中确定framebuffer的作用
+			.setLayers(1);
+
+		framebuffers[i] = Context::GetInstance().device.createFramebuffer(createInfo);					
 	}
 }
 }

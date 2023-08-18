@@ -13,6 +13,8 @@ public:
 	void getImages();
 	// 创建图像视图
 	void createImageViews();
+	// 创建帧缓冲
+	void createFramebuffers(int w, int h);
 
 public:
 	struct SwapchainInfo {
@@ -27,7 +29,8 @@ public:
 	SwapchainInfo info;			// 交换链信息
 	vk::SwapchainKHR swapchain;	// 交换链
 
-	std::vector<vk::Image> images;			// GPU中的图像
-	std::vector<vk::ImageView> imageViews;	// 图像对应的视图
+	std::vector<vk::Image> images;				// GPU中的图像
+	std::vector<vk::ImageView> imageViews;		// 图像对应的视图
+	std::vector<vk::Framebuffer> framebuffers;	// 图像对应的帧缓冲
 };
 }

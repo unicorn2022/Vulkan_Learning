@@ -39,3 +39,10 @@
 - 在光栅化之前，会进行一次`viewport`变换：$[-1,1]^3 → [0,w][0,h]$
 
 <img src="AssetMarkdown/image-20230817104711286.png" alt="image-20230817104711286" style="zoom:80%;" />
+
+# 帧缓冲 FrameBuffer
+
+每个帧缓冲有多个纹理附件`attachment`，也就是`vk::Image`
+
+- `color attachment`：颜色附件，至少一个，用于存储颜色
+- `stencil & depth attachment`：模板&深度附件，用于记录模板/深度值
