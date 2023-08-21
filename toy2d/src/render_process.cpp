@@ -2,10 +2,12 @@
 #include "context.h"
 #include "swapchain.h"
 #include "vertex.h"
+#include "uniform.h"
 
 namespace toy2d {
 
 RenderProcess::RenderProcess() {
+	setLayout = createSetLayout();
 	layout = createLayout();
 	renderPass = createRenderPass();
 	graphicsPipeline = nullptr;
@@ -13,6 +15,7 @@ RenderProcess::RenderProcess() {
 
 RenderProcess::~RenderProcess() {
 	auto& device = Context::GetInstance().device;
+	device.destroyDescriptorSetLayout(setLayout);
 	device.destroyRenderPass(renderPass);
 	device.destroyPipelineLayout(layout);
 	device.destroyPipeline(graphicsPipeline);
@@ -35,8 +38,7 @@ void RenderProcess::RecreateRenderPass() {
 vk::PipelineLayout RenderProcess::createLayout() {
 	vk::PipelineLayoutCreateInfo createInfo;
 
-	createInfo.setPushConstantRangeCount(0)
-		.setSetLayoutCount(0);
+	createInfo.setSetLayouts(setLayout);
 
 	return Context::GetInstance().device.createPipelineLayout(createInfo);
 }
@@ -171,5 +173,13 @@ vk::RenderPass RenderProcess::createRenderPass() {
 
 	/* 创建渲染流程 */
 	return Context::GetInstance().device.createRenderPass(createInfo);
+}
+
+vk::DescriptorSetLayout RenderProcess::createSetLayout() {
+	vk::DescriptorSetLayoutCreateInfo createInfo;
+	auto binding = Uniform::GetBinding();
+	createInfo.setBindings(binding);
+
+	return Context::GetInstance().device.createDescriptorSetLayout(createInfo);
 }
 }

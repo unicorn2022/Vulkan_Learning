@@ -16,9 +16,10 @@ public:
 	void RecreateRenderPass();
 
 public:
-	vk::Pipeline graphicsPipeline = nullptr;	// 图形渲染管线
-	vk::RenderPass renderPass = nullptr;		// 渲染通道
-	vk::PipelineLayout layout = nullptr;		// uniform布局
+	vk::Pipeline graphicsPipeline = nullptr;		// 图形渲染管线
+	vk::RenderPass renderPass = nullptr;			// 渲染通道
+	vk::PipelineLayout layout = nullptr;			// uniform 整体布局
+	vk::DescriptorSetLayout setLayout = nullptr;	// uniform set布局描述
 
 private:
 	// 创建渲染管线Layout
@@ -27,6 +28,8 @@ private:
 	vk::Pipeline createGraphicsPipeline(const std::vector<char>& vertexSource, const std::vector<char>& fragSource);
 	// 创建渲染通道
 	vk::RenderPass createRenderPass();
+	// 创建uniform set布局描述
+	vk::DescriptorSetLayout createSetLayout();
 
 };
 }

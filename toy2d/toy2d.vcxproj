@@ -166,6 +166,7 @@
     <ClInclude Include="include\swapchain.h" />
     <ClInclude Include="include\tool.h" />
     <ClInclude Include="include\toy2d.h" />
+    <ClInclude Include="include\uniform.h" />
     <ClInclude Include="include\vertex.h" />
   </ItemGroup>
   <ItemGroup>

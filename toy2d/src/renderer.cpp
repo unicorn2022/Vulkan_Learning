@@ -9,6 +9,8 @@ const std::array<Vertex, 3> vertices = {
 		Vertex{-0.5, 0.5}
 };
 
+const Uniform uniform{ Color{1, 1, 0} };
+
 Renderer::Renderer(int maxFlightCount){
 	this->maxFlightCount_ = maxFlightCount;
 	this->curFrame_ = 0;
@@ -17,9 +19,18 @@ Renderer::Renderer(int maxFlightCount){
 	createCmdBuffers();		// 创建命令缓冲区
 	createVertexBuffer();	// 创建顶点缓冲区
 	bufferVertexData();		// 将顶点数据拷贝到顶点缓冲区
+	createUniformBuffer();	// 创建Uniform缓冲区
+	bufferUniformData();	// 将Uniform数据拷贝到Uniform缓冲区
+	createDescriptorPool();	// 创建描述符池
+	allocateSets();			// 分配描述符集
+	updateSets();			// 更新描述符集, 将Uniform缓冲区绑定到描述符集
 }
 
 Renderer::~Renderer(){
+	Context::GetInstance().device.destroyDescriptorPool(descriptorPool_);
+
+	hostUniformBuffer_.clear();
+	deviceUniformBuffer_.clear();
 	hostVertexBuffer_.reset();
 	deviceVertexBuffer_.reset();
 
@@ -77,10 +88,12 @@ void Renderer::DrawTriangle() {
 		{
 			// 3.2.1 绑定 Pipeline
 			cmdBufs_[curFrame_].bindPipeline(vk::PipelineBindPoint::eGraphics, renderProcess->graphicsPipeline);
-			// 3.2.2 绑定顶点缓冲区
+			// 3.2.2 绑定描述符集
+			cmdBufs_[curFrame_].bindDescriptorSets(vk::PipelineBindPoint::eGraphics, Context::GetInstance().renderProcess->layout, 0, sets_[curFrame_], {});
+			// 3.2.3 绑定顶点缓冲区
 			vk::DeviceSize offset = 0;
 			cmdBufs_[curFrame_].bindVertexBuffers(0, deviceVertexBuffer_->buffer, offset);
-			// 3.2.3 绘制三角形, 参数如下:
+			// 3.2.4 绘制三角形, 参数如下:
 			// 顶点个数, 实例个数, 第一个顶点的index, 第一个实例的index
 			cmdBufs_[curFrame_].draw(3, 1, 0, 0);
 		}
@@ -158,6 +171,85 @@ void Renderer::bufferVertexData() {
 	Context::GetInstance().device.unmapMemory(hostVertexBuffer_->memory);
 
 	/* 将数据从共享内存放到GPU专属内存中 */
+	copyBuffer(hostVertexBuffer_->buffer, deviceVertexBuffer_->buffer,
+		hostVertexBuffer_->size, 0, 0);
+}
+
+void Renderer::createDescriptorPool() {
+	// 描述符集: 包含多个描述符子
+	// 描述符子: 对应shader中的uniform变量
+	vk::DescriptorPoolSize poolSize;
+	poolSize.setType(vk::DescriptorType::eUniformBuffer)
+		.setDescriptorCount(maxFlightCount_); // 总共创建多少个描述符子
+	
+	vk::DescriptorPoolCreateInfo createInfo;
+	createInfo.setMaxSets(maxFlightCount_) // 最大描述符集个数, 多少帧就需要创建多少个描述符集
+		.setPoolSizes(poolSize);
+
+	descriptorPool_ = Context::GetInstance().device.createDescriptorPool(createInfo);
+}
+
+void Renderer::allocateSets() {
+	std::vector<vk::DescriptorSetLayout> layouts(maxFlightCount_, Context::GetInstance().renderProcess->setLayout);
+	
+	vk::DescriptorSetAllocateInfo allocInfo;
+	allocInfo.setDescriptorPool(descriptorPool_)	// 描述符集池
+		.setDescriptorSetCount(maxFlightCount_)		// 描述符集个数
+		.setSetLayouts(layouts);					// 描述符集布局: 有多少个描述符集, 就需要有多少个layout
+
+	sets_ = Context::GetInstance().device.allocateDescriptorSets(allocInfo);
+}
+
+void Renderer::updateSets() {
+	for (int i = 0; i < sets_.size(); i++) {
+		auto& set = sets_[i];
+		vk::DescriptorBufferInfo bufferInfo;
+		bufferInfo.setBuffer(deviceUniformBuffer_[i]->buffer)
+			.setOffset(0)
+			.setRange(deviceUniformBuffer_[i]->size);
+
+		vk::WriteDescriptorSet writer;
+		writer.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+			.setBufferInfo(bufferInfo)	// 关联的buffer
+			.setDstBinding(0)			// 和哪个binding关联
+			.setDstSet(set)				// 和哪个描述符集关联
+			.setDstArrayElement(0)		// 描述符集中的第几个描述符子
+			.setDescriptorCount(1);		// 描述符子个数
+		Context::GetInstance().device.updateDescriptorSets(writer, {});
+	}
+}
+
+void Renderer::createUniformBuffer() {
+	hostUniformBuffer_.resize(maxFlightCount_);
+	deviceUniformBuffer_.resize(maxFlightCount_);
+
+	for (auto& buffer : hostUniformBuffer_) {
+		buffer.reset(new Buffer(sizeof(uniform),
+			vk::BufferUsageFlagBits::eTransferSrc,
+			vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostVisible));
+	}
+
+	for (auto& buffer : deviceUniformBuffer_) {
+		buffer.reset(new Buffer(sizeof(uniform),
+			vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eUniformBuffer,
+			vk::MemoryPropertyFlagBits::eDeviceLocal));
+	}
+}
+
+void Renderer::bufferUniformData() {
+	for (int i = 0; i < hostUniformBuffer_.size(); i++) {
+		auto& buffer = hostUniformBuffer_[i];
+		// 将数据传输到共享内存中
+		void* ptr = Context::GetInstance().device.mapMemory(buffer->memory, 0, buffer->size);
+		memcpy(ptr, &uniform, sizeof(uniform));
+		Context::GetInstance().device.unmapMemory(buffer->memory);
+		
+		// 将数据从共享内存放到GPU专属内存中
+		copyBuffer(buffer->buffer, deviceUniformBuffer_[i]->buffer, buffer->size, 0, 0);
+	}
+}
+
+void Renderer::copyBuffer(vk::Buffer& src, vk::Buffer& dst, size_t size, size_t srcOffset, size_t dstOffset) {
 	vk::CommandBufferBeginInfo begin;
 	begin.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 	// 使用命令缓冲区进行数据传输
@@ -165,10 +257,10 @@ void Renderer::bufferVertexData() {
 	cmdBuf.begin(begin);
 	{
 		vk::BufferCopy region;
-		region.setSize(hostVertexBuffer_->size)
-			.setSrcOffset(0)
-			.setDstOffset(0);
-		cmdBuf.copyBuffer(hostVertexBuffer_->buffer, deviceVertexBuffer_->buffer, region);
+		region.setSize(size)
+			.setSrcOffset(srcOffset)
+			.setDstOffset(dstOffset);
+		cmdBuf.copyBuffer(src, dst, region);
 	}
 	cmdBuf.end();
 	// 提交命令
