@@ -1,24 +1,29 @@
 #include "toy2d.h"
 
 namespace toy2d {
-	void Init(const std::vector<const char*> extensions, CreateSurfaceFunc func, int w, int h) {
+
+	std::unique_ptr<Renderer> renderer_;
+
+	void Init(const std::vector<const char*> extensions, Context::GetSurfaceCallback func, int w, int h) {
 		Context::Init(extensions, func);
-		Context::GetInstance().InitSwapchain(w, h);
-		Shader::Init(ReadWholeFile("./shader/vert.spv"), ReadWholeFile("./shader/frag.spv"));
-		Context::GetInstance().renderProcess->InitRenderPass();
-		Context::GetInstance().renderProcess->InitLayout();
-		Context::GetInstance().swapchain->createFramebuffers(w, h);
-		Context::GetInstance().renderProcess->InitPipeline(w, h);
-		Context::GetInstance().InitRenderer();
+		auto& ctx = Context::GetInstance();
+		ctx.initSwapchain(w, h);
+		ctx.initRenderProcess();
+		ctx.initGraphicsPipeline();
+		ctx.swapchain->InitFramebuffers();
+		ctx.initCommandPool();
+
+		renderer_  = std::make_unique<Renderer>();
 	}
 
 	void Quit() {
 		Context::GetInstance().device.waitIdle(); // 等待GPU执行完所有的命令
-		Context::GetInstance().renderer.reset();
-		Context::GetInstance().renderProcess.reset();
-		Context::GetInstance().DestroySwapchain();
-		Shader::Quit();
+		renderer_.reset();
 		Context::Quit();
+	}
+
+	Renderer* GetRenderer() {
+		return renderer_.get();
 	}
 }
 

@@ -1,9 +1,8 @@
+#include "toy2d.h"
 #include "SDL2/SDL.h"
 #include "SDL2/SDL_vulkan.h"
-#include <iostream>
-#include <vector>
+#include <SDL2/SDL_video.h>
 
-#include "toy2d.h"
 
 void MainLoop();
 
@@ -52,16 +51,17 @@ int main(int argc, char* argv[]) {
 }
 
 void MainLoop() {
+	auto renderer = toy2d::GetRenderer();
+
     bool shouldClose = false;
     SDL_Event event;
 
-	auto& renderer = toy2d::GetRenderer();
     while (!shouldClose) {
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
                 shouldClose = true;
             }
         }
-		renderer.DrawTriangle();
+		renderer->DrawTriangle();
     }
 }
