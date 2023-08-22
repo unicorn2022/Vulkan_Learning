@@ -3,7 +3,13 @@
 #include "SDL2/SDL_vulkan.h"
 #include <SDL2/SDL_video.h>
 
+struct MyContext {
+	bool shouldClose = false;
+	float x, y; 
+	toy2d::Renderer* renderer;
+};
 void MainLoop();
+void HandleInput(MyContext& context);
 
 int main(int argc, char* argv[]) {
 	// SDL初始化
@@ -47,51 +53,59 @@ int main(int argc, char* argv[]) {
 }
 
 void MainLoop() {
-	auto renderer = toy2d::GetRenderer();
+	MyContext context;
+	context.shouldClose = false;
+	context.x = 100;
+	context.y = 100;
+	context.renderer = toy2d::GetRenderer();
+	context.renderer->SetDrawColor(toy2d::Color{ 0, 1, 0 });
 
-    bool shouldClose = false;
-    SDL_Event event;
-
-	float x = 100, y = 100;
-	renderer->SetDrawColor(toy2d::Color{ 0, 1, 0 });
-
-    while (!shouldClose) {
+    while (!context.shouldClose) {
 		// 处理SDL事件
-        while (SDL_PollEvent(&event)) {
-			// 处理退出事件
-            if (event.type == SDL_QUIT) {
-                shouldClose = true;
-            }
-
-			// 处理输入事件
-			if (event.type == SDL_KEYDOWN) {
-				if (event.key.keysym.sym == SDLK_a) {
-					x -= 10;
-				}
-				if (event.key.keysym.sym == SDLK_d) {
-					x += 10;
-				}
-				if (event.key.keysym.sym == SDLK_w) {
-					y -= 10;
-				}
-				if (event.key.keysym.sym == SDLK_s) {
-					y += 10;
-				}
-				if (event.key.keysym.sym == SDLK_0) {
-					renderer->SetDrawColor(toy2d::Color{ 1, 0, 0 });
-				}
-				if (event.key.keysym.sym == SDLK_1) {
-					renderer->SetDrawColor(toy2d::Color{ 0, 1, 0 });
-				}
-				if (event.key.keysym.sym == SDLK_2) {
-					renderer->SetDrawColor(toy2d::Color{ 0, 0, 1 });
-				}
-			}
-        }
+		HandleInput(context);
+       
 		// 绘制矩形
-		renderer->DrawRect(toy2d::Rect{ 
-			toy2d::Vec{x, y},
+		context.renderer->DrawRect(toy2d::Rect{
+			toy2d::Vec{context.x, context.y},
 			toy2d::Size{200, 300} 
 		});
     }
+}
+
+void HandleInput(MyContext& context) {
+	SDL_Event event;
+	while (SDL_PollEvent(&event)) {
+		// 处理退出事件
+		if (event.type == SDL_QUIT) {
+			context.shouldClose = true;
+		}
+
+		// 处理输入事件
+		if (event.type == SDL_KEYDOWN) {
+			if (event.key.keysym.sym == SDLK_a) {
+				context.x -= 10;
+			}
+			if (event.key.keysym.sym == SDLK_d) {
+				context.x += 10;
+			}
+			if (event.key.keysym.sym == SDLK_w) {
+				context.y -= 10;
+			}
+			if (event.key.keysym.sym == SDLK_s) {
+				context.y += 10;
+			}
+			if (event.key.keysym.sym == SDLK_0) {
+				context.renderer->SetDrawColor(toy2d::Color{ 1, 0, 0 });
+			}
+			if (event.key.keysym.sym == SDLK_1) {
+				context.renderer->SetDrawColor(toy2d::Color{ 0, 1, 0 });
+			}
+			if (event.key.keysym.sym == SDLK_2) {
+				context.renderer->SetDrawColor(toy2d::Color{ 0, 0, 1 });
+			}
+			if (event.key.keysym.sym == SDLK_ESCAPE) {
+				context.shouldClose = true;
+			}
+		}
+	}
 }
