@@ -94,14 +94,26 @@ void HandleInput(MyContext& context) {
 			if (event.key.keysym.sym == SDLK_s) {
 				context.y += 10;
 			}
-			if (event.key.keysym.sym == SDLK_0) {
-				context.renderer->SetDrawColor(toy2d::Color{ 1, 0, 0 });
-			}
 			if (event.key.keysym.sym == SDLK_1) {
-				context.renderer->SetDrawColor(toy2d::Color{ 0, 1, 0 });
+				context.renderer->SetDrawColor(toy2d::Color{ 0, 0, 1 });
 			}
 			if (event.key.keysym.sym == SDLK_2) {
-				context.renderer->SetDrawColor(toy2d::Color{ 0, 0, 1 });
+				context.renderer->SetDrawColor(toy2d::Color{ 0, 1, 0 });
+			}
+			if (event.key.keysym.sym == SDLK_3) {
+				context.renderer->SetDrawColor(toy2d::Color{ 0, 1, 1 });
+			}
+			if (event.key.keysym.sym == SDLK_4) {
+				context.renderer->SetDrawColor(toy2d::Color{ 1, 0, 0 });
+			}
+			if (event.key.keysym.sym == SDLK_5) {
+				context.renderer->SetDrawColor(toy2d::Color{ 1, 0, 1 });
+			}
+			if (event.key.keysym.sym == SDLK_6) {
+				context.renderer->SetDrawColor(toy2d::Color{ 1, 1, 0 });
+			}
+			if (event.key.keysym.sym == SDLK_7) {
+				context.renderer->SetDrawColor(toy2d::Color{ 1, 1, 1 });
 			}
 			if (event.key.keysym.sym == SDLK_ESCAPE) {
 				context.shouldClose = true;
