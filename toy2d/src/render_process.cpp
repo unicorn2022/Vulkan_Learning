@@ -98,14 +98,24 @@ vk::Pipeline RenderProcess::createGraphicsPipeline(const Shader& shader) {
 
 	// 6. 测试: 深度测试, 模板测试
 
-	// 7. 颜色混合
+	// 7. 颜色混合 (公式法) 
+	// newRGB = (srcFactor * srcRGB) op (dstFactor * dstRGB)
+	// newA = (srcFactor * srcA) op (dstFactor * dstA)
+	// 对于透明度混合来说: newRGB = 1 * srcRGB + (1 - scrA) * dstRGB, newA = srcA
 	vk::PipelineColorBlendAttachmentState attachs;
-	attachs.setBlendEnable(false)	// 是否启用混合附件
+	attachs.setBlendEnable(true)	// 是否启用混合附件
 		.setColorWriteMask(
 			vk::ColorComponentFlagBits::eA |
 			vk::ColorComponentFlagBits::eB |
 			vk::ColorComponentFlagBits::eG |
-			vk::ColorComponentFlagBits::eR); // 颜色写入掩码
+			vk::ColorComponentFlagBits::eR) // 颜色写入掩码
+		.setSrcColorBlendFactor(vk::BlendFactor::eOne)
+		.setDstColorBlendFactor(vk::BlendFactor::eOneMinusSrcAlpha)
+		.setColorBlendOp(vk::BlendOp::eAdd)
+		.setSrcAlphaBlendFactor(vk::BlendFactor::eOne)
+		.setDstAlphaBlendFactor(vk::BlendFactor::eZero)
+		.setAlphaBlendOp(vk::BlendOp::eAdd);
+
 	vk::PipelineColorBlendStateCreateInfo blendInfo;
 	blendInfo.setLogicOpEnable(false)	// 是否启用逻辑运算
 		.setAttachments(attachs);		// 颜色混合附件

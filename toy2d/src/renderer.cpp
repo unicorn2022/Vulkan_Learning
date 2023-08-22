@@ -373,6 +373,7 @@ void Renderer::updateDescriptorSets() {
 
 void Renderer::createTexture() {
 	texture.reset(new Texture("./img/avatar.png"));
+	//texture.reset(new Texture("./img/role.png"));
 }
 
 void Renderer::createSampler() {
