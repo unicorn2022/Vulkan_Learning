@@ -4,9 +4,8 @@
 #include "context.h"
 #include "command_manager.h"
 #include "swapchain.h"
-#include "vertex.h"
+#include "mymath.h"
 #include "buffer.h"
-#include "uniform.h"
 #include <limits>
 
 namespace toy2d {
@@ -16,8 +15,9 @@ public:
 	Renderer(int maxFlightCount = 2);
 	~Renderer();
 
-	// 进行每一帧的渲染
-	void DrawTriangle();
+	void SetProject(int right, int left, int bottom, int top, int far, int near);
+	void DrawRect(const Rect&);
+	void SetDrawColor(const Color&);
 
 
 private:
@@ -29,27 +29,39 @@ private:
 	// 创建命令缓冲区
 	void createCmdBuffers();
 	
-	/* 顶点数据 */
-	// 创建顶点缓冲区
-	void createVertexBuffer();	
-	// 将数据传输到顶点缓冲区
-	void bufferVertexData();	
-	
-	/* uniform数据 */
-	// 创建描述符池
-	void createDescriptorPool();
-	// 申请描述符集
-	void allocateSets();
-	// 更新描述符集: 将uniform缓冲区绑定到描述符集
-	void updateSets();
+	/* 创建缓冲区 */
+	// 创建vertex&index缓冲区
+	void createBuffers();
 	// 创建uniform缓冲区
-	void createUniformBuffer();	
-	// 将数据传输到uniform缓冲区
-	void bufferUniformData();
+	void createUniformBuffer(int flightCount);
 
+	/* 将数据传送给GPU */
+	// 初始化MVP矩阵
+	void initMats();
+	// 传输数据
+	void bufferData();
+	// 传输vertex数据
+	void bufferVertexData();
+	// 传输index数据
+	void bufferIndicesData();
+	// 传输MVP矩阵
+	void bufferMVPData();
+
+	/* 创建描述符集 */
+	// 创建描述符池
+	void createDescriptorPool(int flightCount);
+	// 申请描述符集
+	std::vector<vk::DescriptorSet> allocDescriptorSet(int flightCount);
+	// 申请描述符集
+	void allocDescriptorSets(int flightCount);
+	// 更新描述符集: 将uniform缓冲区绑定到描述符集
+	void updateDescriptorSets();
+	
 	/* 工具函数 */
 	// 将数据从srcBuffer拷贝到dstBuffer
-	void copyBuffer(vk::Buffer& src, vk::Buffer& dst, size_t size, size_t srcOffset, size_t dstOffset);
+	void transformBuffer2Device(Buffer& src, Buffer& dst, size_t srcOffset, size_t dstOffset, size_t size);
+	// 查询内存类型索引
+	std::uint32_t queryBufferMemTypeIndex(std::uint32_t, vk::MemoryPropertyFlags);
 
 private:
 	int maxFlightCount_;	// 最大同时渲染帧数
@@ -62,13 +74,19 @@ private:
 	std::vector<vk::CommandBuffer> cmdBufs_;		// 命令缓冲区
 
 	/* 顶点数据 */
-	std::unique_ptr<Buffer> hostVertexBuffer_;		// CPU顶点缓冲区
-	std::unique_ptr<Buffer> deviceVertexBuffer_;	// GPU顶点缓冲区
+	std::unique_ptr<Buffer> verticesBuffer_;	// 顶点缓冲区
+	std::unique_ptr<Buffer> indicesBuffer_;		// 索引缓冲区
+
+	/* 变换矩阵 */
+	Mat4 projectMat_;
+	Mat4 viewMat_;
 	
 	/* uniform数据 */
 	vk::DescriptorPool descriptorPool_;
-	std::vector<vk::DescriptorSet> sets_;
-	std::vector<std::unique_ptr<Buffer>> hostUniformBuffer_;	// CPU uniform缓冲区
-	std::vector<std::unique_ptr<Buffer>> deviceUniformBuffer_;	// GPU uniform缓冲区
+	std::vector<vk::DescriptorSet> descriptorSets_;
+	std::vector<std::unique_ptr<Buffer>> uniformBuffers_;		// uniform缓冲区
+	std::vector<std::unique_ptr<Buffer>> colorBuffers_;			// 颜色缓冲区
+	std::vector<std::unique_ptr<Buffer>> deviceUniformBuffers_;	// (GPU)uniform缓冲区
+	std::vector<std::unique_ptr<Buffer>> deviceColorBuffers_;	// (GPU)颜色缓冲区
 };
 }

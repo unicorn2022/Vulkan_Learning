@@ -20,6 +20,8 @@ public:
 
 private:
 	vk::CommandPool pool_;
+
+private:
 	// ´´½¨ÃüÁî³Ø
 	vk::CommandPool createCommandPool();
 };

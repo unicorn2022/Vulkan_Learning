@@ -5,21 +5,22 @@ namespace toy2d {
 CommandManager::CommandManager() {
 	pool_ = createCommandPool();
 }
+
 CommandManager::~CommandManager() {
-	Context::GetInstance().device.destroyCommandPool(pool_);
+	Context::Instance().device.destroyCommandPool(pool_);
 }
 
 void CommandManager::ResetCommands() {
-	Context::GetInstance().device.resetCommandPool(pool_);
+	Context::Instance().device.resetCommandPool(pool_);
 }
 
 vk::CommandPool CommandManager::createCommandPool() {
 	vk::CommandPoolCreateInfo createInfo;
 
-	createInfo.setQueueFamilyIndex(Context::GetInstance().queueInfo.graphicsIndex.value())	// 设置命令池所属队列
-		.setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer);						// 设置命令池的标志
+	createInfo.setQueueFamilyIndex(Context::Instance().queueInfo.graphicsIndex.value())	// 设置命令池所属队列
+		.setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer);					// 设置命令池的标志
 	
-	return Context::GetInstance().device.createCommandPool(createInfo);
+	return Context::Instance().device.createCommandPool(createInfo);
 }
 
 std::vector<vk::CommandBuffer> CommandManager::CreateCommandBuffers(uint32_t count) {
@@ -29,7 +30,7 @@ std::vector<vk::CommandBuffer> CommandManager::CreateCommandBuffers(uint32_t cou
 		.setCommandBufferCount(1)	// 设置命令缓冲区数量
 		.setLevel(vk::CommandBufferLevel::ePrimary);	// 设置命令级别: ePrimary可以主动执行
 
-	return Context::GetInstance().device.allocateCommandBuffers(allocInfo);
+	return Context::Instance().device.allocateCommandBuffers(allocInfo);
 }
 
 vk::CommandBuffer CommandManager::CreateOneCommandBuffer() {
@@ -37,7 +38,7 @@ vk::CommandBuffer CommandManager::CreateOneCommandBuffer() {
 }
 
 void CommandManager::FreeCommand(vk::CommandBuffer buf) {
-	Context::GetInstance().device.freeCommandBuffers(pool_, buf);
+	Context::Instance().device.freeCommandBuffers(pool_, buf);
 }
 
 

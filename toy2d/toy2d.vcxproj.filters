@@ -48,6 +48,12 @@
     <ClCompile Include="src\command_manager.cpp">
       <Filter>源文件\toy2d</Filter>
     </ClCompile>
+    <ClCompile Include="src\mymath.cpp">
+      <Filter>源文件\toy2d</Filter>
+    </ClCompile>
+    <ClCompile Include="src\shader.cpp">
+      <Filter>源文件\toy2d</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\context.h">
@@ -68,16 +74,16 @@
     <ClInclude Include="include\renderer.h">
       <Filter>头文件\toy2d</Filter>
     </ClInclude>
-    <ClInclude Include="include\vertex.h">
-      <Filter>头文件\toy2d</Filter>
-    </ClInclude>
     <ClInclude Include="include\buffer.h">
       <Filter>头文件\toy2d</Filter>
     </ClInclude>
     <ClInclude Include="include\command_manager.h">
       <Filter>头文件\toy2d</Filter>
     </ClInclude>
-    <ClInclude Include="include\uniform.h">
+    <ClInclude Include="include\mymath.h">
+      <Filter>头文件\toy2d</Filter>
+    </ClInclude>
+    <ClInclude Include="include\shader.h">
       <Filter>头文件\toy2d</Filter>
     </ClInclude>
   </ItemGroup>

@@ -12,7 +12,7 @@ void Context::Quit() {
 	delete instance_;
 }
 
-Context& Context::GetInstance() {
+Context& Context::Instance() {
 	return *instance_;
 }
 
@@ -49,6 +49,7 @@ Context::Context(const std::vector<const char*> extensions, GetSurfaceCallback c
 }
 
 Context::~Context() {
+	shader.reset();
 	commandManager.reset();
 	renderProcess.reset();
 	swapchain.reset();
@@ -59,14 +60,14 @@ Context::~Context() {
 vk::Instance Context::createInstance(const std::vector<const char*> extensions) {
 	// 应用程序配置
 	vk::ApplicationInfo appInfo;
-	appInfo.setApiVersion(VK_API_VERSION_1_3);
-
-	// 实例配置
-	const std::vector<const char*> layers = { "VK_LAYER_KHRONOS_validation" };
 	vk::InstanceCreateInfo createInfo;
+	appInfo.setApiVersion(VK_API_VERSION_1_3);
 	createInfo.setPApplicationInfo(&appInfo)	// 应用程序配置
-		.setPEnabledExtensionNames(extensions)	// 启用扩展
-		.setPEnabledLayerNames(layers);			// 开启验证层
+		.setPEnabledExtensionNames(extensions);	// 启用扩展
+
+	// 开启验证层
+	std::vector<const char*> layers = { "VK_LAYER_KHRONOS_validation" };
+	createInfo.setPEnabledLayerNames(layers);
 
 	// 创建 vk 实例
 	return vk::createInstance(createInfo);
@@ -96,17 +97,23 @@ vk::PhysicalDevice Context::pickupPhysicalDevice() {
 
 vk::Device Context::createDevice(vk::SurfaceKHR surface) {
 	queryQueueInfo(surface);
+
+	/* 启用扩展: 交换链 */
+	vk::DeviceCreateInfo deviceCreateInfo;
+	std::array extensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+	deviceCreateInfo.setPEnabledExtensionNames(extensions);
+
 	
 	/* 命令队列配置 */
+	std::vector<vk::DeviceQueueCreateInfo> queueInfos;
 	float priority = 1;
-	std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
 	// 同一个队列, 只需要创建一个队列即可
 	if (queueInfo.isSameQueue()) {
 		vk::DeviceQueueCreateInfo queueCreateInfo;
 		queueCreateInfo.setPQueuePriorities(&priority) // 优先级, 最高是1, 最低是0
 			.setQueueCount(1) // 队列大小
 			.setQueueFamilyIndex(queueInfo.graphicsIndex.value()); // 命令队列在物理设备中的index
-		queueCreateInfos.push_back(queueCreateInfo);
+		queueInfos.push_back(queueCreateInfo);
 	}
 	// 是不同的队列, 需要创建两个队列
 	else {
@@ -114,20 +121,15 @@ vk::Device Context::createDevice(vk::SurfaceKHR surface) {
 		queueCreateInfo.setPQueuePriorities(&priority)
 			.setQueueCount(1)
 			.setQueueFamilyIndex(queueInfo.graphicsIndex.value());
-		queueCreateInfos.push_back(queueCreateInfo);
+		queueInfos.push_back(queueCreateInfo);
 
 		queueCreateInfo.setQueueFamilyIndex(queueInfo.presentIndex.value());
-		queueCreateInfos.push_back(queueCreateInfo);
+		queueInfos.push_back(queueCreateInfo);
 	}
-
-	/* 逻辑设备配置 */
-	std::array extensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
-	vk::DeviceCreateInfo deivceCreateInfo;
-	deivceCreateInfo.setQueueCreateInfos(queueCreateInfos)
-		.setPEnabledExtensionNames(extensions);		// 启用扩展
+	deviceCreateInfo.setQueueCreateInfos(queueInfos);
 
 	/* 创建逻辑设备 */
-	return phyDevice.createDevice(deivceCreateInfo);
+	return phyDevice.createDevice(deviceCreateInfo);
 }
 
 void Context::queryQueueInfo(vk::SurfaceKHR surface) {
@@ -158,13 +160,17 @@ void Context::initRenderProcess() {
 }
 
 void Context::initGraphicsPipeline() {
-	auto vertexSource = ReadWholeFile("./shader/vert.spv");
-	auto fragSource = ReadWholeFile("./shader/frag.spv");
-	renderProcess->RecreateGraphicsPipeline(vertexSource, fragSource);
+	renderProcess->RecreateGraphicsPipeline(*shader);
 }
 
 void Context::initCommandPool() {
 	commandManager = std::make_unique<CommandManager>();
+}
+
+void Context::initShaderModules() {
+	auto vertexSource = ReadWholeFile("./shader/vert.spv");
+	auto fragSource = ReadWholeFile("./shader/frag.spv");
+	shader = std::make_unique<Shader>(vertexSource, fragSource);
 }
 
 }

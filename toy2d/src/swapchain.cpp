@@ -2,6 +2,7 @@
 #include "context.h"
 
 namespace toy2d {
+
 Swapchain::Swapchain(vk::SurfaceKHR surface, int w, int h) {
 	this->surface = surface;
 	querySurfaceInfo(w, h);
@@ -10,7 +11,7 @@ Swapchain::Swapchain(vk::SurfaceKHR surface, int w, int h) {
 }
 
 Swapchain::~Swapchain() {
-	auto& device = Context::GetInstance().device;
+	auto& device = Context::Instance().device;
 
 	for (auto& img : images) 
 		device.destroyImageView(img.view);
@@ -18,7 +19,7 @@ Swapchain::~Swapchain() {
 		device.destroyFramebuffer(framebuffer);
 
 	device.destroySwapchainKHR(swapchain);
-	Context::GetInstance().instance.destroySurfaceKHR(surface);
+	Context::Instance().instance.destroySurfaceKHR(surface);
 }
 
 void Swapchain::InitFramebuffers() {
@@ -29,14 +30,14 @@ void Swapchain::querySurfaceInfo(int w, int h) {
 	surfaceInfo_.format = querySurfaceFormat();
 
 	// 查询surface支持的图像个数
-	auto capability = Context::GetInstance().phyDevice.getSurfaceCapabilitiesKHR(surface);
+	auto capability = Context::Instance().phyDevice.getSurfaceCapabilitiesKHR(surface);
 	surfaceInfo_.count = std::clamp<uint32_t>(capability.minImageCount + 1, capability.minImageCount, capability.maxImageCount);
 	// 查询surface将图像贴到屏幕上之前, 对图像做的变换
 	surfaceInfo_.transform = capability.currentTransform;
 	// 查询surface支持的图像大小
 	surfaceInfo_.extent = querySurfaceExtent(capability, w, h);
 	// 查询surface的显示模式
-	auto presents = Context::GetInstance().phyDevice.getSurfacePresentModesKHR(surface);
+	auto presents = Context::Instance().phyDevice.getSurfacePresentModesKHR(surface);
 	surfaceInfo_.present = vk::PresentModeKHR::eFifo;
 	for (const auto& present : presents) {
 		// vk::PresentModeKHR::eFifo		-- 先进先出(默认模式)
@@ -51,7 +52,7 @@ void Swapchain::querySurfaceInfo(int w, int h) {
 }
 
 vk::SurfaceFormatKHR Swapchain::querySurfaceFormat() {
-	auto formats = Context::GetInstance().phyDevice.getSurfaceFormatsKHR(surface);
+	auto formats = Context::Instance().phyDevice.getSurfaceFormatsKHR(surface);
 	for (const auto& format : formats) {
 		if (format.format == vk::Format::eR8G8B8A8Srgb && format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear) {
 			return format;
@@ -80,17 +81,17 @@ vk::SwapchainKHR Swapchain::createSwapchain() {
 	vk::SwapchainCreateInfoKHR createInfo;
 	createInfo.setClipped(true)						// GPU上的图像如果大于屏幕, 则进行裁剪
 		.setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque)  // 将图像绘制到窗口上时, 怎样与原有图像进行混合: 不混合
-		.setImageExtent(surfaceInfo_.extent)
-		.setImageColorSpace(surfaceInfo_.format.colorSpace)
-		.setImageFormat(surfaceInfo_.format.format)
+		.setImageExtent(surfaceInfo_.extent)						// 图像大小		
+		.setImageColorSpace(surfaceInfo_.format.colorSpace)			// 图像颜色空间
+		.setImageFormat(surfaceInfo_.format.format)					// 图像格式
 		.setImageUsage(vk::ImageUsageFlagBits::eColorAttachment)	// 图像用途: 颜色附件, 允许GPU在其上面绘制像素点
-		.setMinImageCount(surfaceInfo_.count)
+		.setMinImageCount(surfaceInfo_.count)		// 图像个数
 		.setImageArrayLayers(1)						// 图像的layer数量, 每一个layer都是一个image数组
 		.setPresentMode(surfaceInfo_.present)		// 显示模式
 		.setPreTransform(surfaceInfo_.transform)	// 图像变换
 		.setSurface(surface);						// 设置对应的surface
 
-	auto queueInfo = Context::GetInstance().queueInfo;
+	auto queueInfo = Context::Instance().queueInfo;
 	if (queueInfo.isSameQueue()) {
 		createInfo.setQueueFamilyIndices(queueInfo.graphicsIndex.value())
 			.setImageSharingMode(vk::SharingMode::eExclusive); // 同时只能被一个队列使用
@@ -105,11 +106,11 @@ vk::SwapchainKHR Swapchain::createSwapchain() {
 	}
 
 	/* 创建交换链 */
-	return Context::GetInstance().device.createSwapchainKHR(createInfo);
+	return Context::Instance().device.createSwapchainKHR(createInfo);
 }
 
 void Swapchain::createImageAndViews() {
-	auto images = Context::GetInstance().device.getSwapchainImagesKHR(swapchain);
+	auto images = Context::Instance().device.getSwapchainImagesKHR(swapchain);
 	for (auto& image : images) {
 		Image img;
 		img.image = image;
@@ -134,7 +135,7 @@ void Swapchain::createImageAndViews() {
 			.setSubresourceRange(range);			// 多级渐变纹理设置
 
 		/* 创建视图 */
-		img.view = Context::GetInstance().device.createImageView(viewCreateInfo);
+		img.view = Context::Instance().device.createImageView(viewCreateInfo);
 		this->images.push_back(img);
 	}
 }
@@ -148,11 +149,10 @@ void Swapchain::createFramebuffers() {
 			.setLayers(1)
 			.setWidth(GetExtent().width)
 			.setHeight(GetExtent().height)
-			.setRenderPass(Context::GetInstance().renderProcess->renderPass); // 绘制流程: 在renderpass中确定framebuffer的作用
+			.setRenderPass(Context::Instance().renderProcess->renderPass); // 绘制流程: 在renderpass中确定framebuffer的作用
 
-		framebuffers.push_back(Context::GetInstance().device.createFramebuffer(createInfo));
+		framebuffers.push_back(Context::Instance().device.createFramebuffer(createInfo));
 	}
 }
-
 
 }

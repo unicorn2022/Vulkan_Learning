@@ -1,76 +1,67 @@
 #include "render_process.h"
 #include "context.h"
 #include "swapchain.h"
-#include "vertex.h"
-#include "uniform.h"
+#include "mymath.h"
 
 namespace toy2d {
 
 RenderProcess::RenderProcess() {
-	setLayout = createSetLayout();
 	layout = createLayout();
 	renderPass = createRenderPass();
 	graphicsPipeline = nullptr;
 }
 
 RenderProcess::~RenderProcess() {
-	auto& device = Context::GetInstance().device;
-	device.destroyDescriptorSetLayout(setLayout);
+	auto& device = Context::Instance().device;
 	device.destroyRenderPass(renderPass);
 	device.destroyPipelineLayout(layout);
 	device.destroyPipeline(graphicsPipeline);
 }
 
-void RenderProcess::RecreateGraphicsPipeline(const std::vector<char>& vertexSource, const std::vector<char>& fragSource) {
-	if (graphicsPipeline) {
-		Context::GetInstance().device.destroyPipeline(graphicsPipeline);
-	}
-	graphicsPipeline = createGraphicsPipeline(vertexSource, fragSource);
+void RenderProcess::RecreateGraphicsPipeline(const Shader& shader) {
+	if (graphicsPipeline) 
+		Context::Instance().device.destroyPipeline(graphicsPipeline);
+	
+	graphicsPipeline = createGraphicsPipeline(shader);
 }
 
 void RenderProcess::RecreateRenderPass() {
-	if (renderPass) {
-		Context::GetInstance().device.destroyRenderPass(renderPass);
-	}
+	if (renderPass) 
+		Context::Instance().device.destroyRenderPass(renderPass);
+	
 	renderPass = createRenderPass();
 }
 
 vk::PipelineLayout RenderProcess::createLayout() {
 	vk::PipelineLayoutCreateInfo createInfo;
 
-	createInfo.setSetLayouts(setLayout);
+	auto range = Context::Instance().shader->GetPushConstantRange();
+	createInfo.setSetLayouts(Context::Instance().shader->GetDescriptorSetLayouts())	// 描述符集合
+		.setPushConstantRanges(range);	// PushConstant配置
 
-	return Context::GetInstance().device.createPipelineLayout(createInfo);
+	return Context::Instance().device.createPipelineLayout(createInfo);
 }
 
-vk::Pipeline RenderProcess::createGraphicsPipeline(const std::vector<char>& vertexSource, const std::vector<char>& fragSource) {
+vk::Pipeline RenderProcess::createGraphicsPipeline(const Shader& shader) {
 	/* 流水线配置 */
 	vk::GraphicsPipelineCreateInfo createInfo;
 
-	// 0. 创建着色器
-	vk::ShaderModuleCreateInfo vertexModuleCreateInfo, fragModuleCreateInfo;
-	vertexModuleCreateInfo.setCodeSize(vertexSource.size())
-		.setPCode((std::uint32_t*)vertexSource.data());
-	fragModuleCreateInfo.setCodeSize(fragSource.size())
-		.setPCode((std::uint32_t*)fragSource.data());
-	auto vertexModule = Context::GetInstance().device.createShaderModule(vertexModuleCreateInfo);
-	auto fragModule = Context::GetInstance().device.createShaderModule(fragModuleCreateInfo);
-
+	// 0. 着色器
 	std::array<vk::PipelineShaderStageCreateInfo, 2> stageCreateInfos;
-	stageCreateInfos[0].setModule(vertexModule)
+	stageCreateInfos[0].setModule(shader.GetVertexModule())
 		.setPName("main")
 		.setStage(vk::ShaderStageFlagBits::eVertex);
-	stageCreateInfos[1].setModule(fragModule)
+	stageCreateInfos[1].setModule(shader.GetFragModule())
 		.setPName("main")
 		.setStage(vk::ShaderStageFlagBits::eFragment);
 	createInfo.setStages(stageCreateInfos);
 
 	// 1. 顶点输入
 	vk::PipelineVertexInputStateCreateInfo vertexInputCreateInfo;
-	auto attribute = Vertex::GetAttribute();	// 顶点属性
-	auto binding = Vertex::GetBinding();		// 顶点绑定
-	vertexInputCreateInfo.setVertexAttributeDescriptions(attribute)
-		.setVertexBindingDescriptions(binding);
+	auto attributeDesc = Vec::GetAttributeDescription();	// 顶点属性
+	auto bindingDesc = Vec::GetBindingDescription();		// 顶点绑定
+	vertexInputCreateInfo.setVertexAttributeDescriptions(attributeDesc)
+		.setVertexBindingDescriptions(bindingDesc);
 	createInfo.setPVertexInputState(&vertexInputCreateInfo);
 
 	// 2. 顶点聚集
@@ -81,22 +72,22 @@ vk::Pipeline RenderProcess::createGraphicsPipeline(const std::vector<char>& vert
 
 	// 3. 视口变换 & 裁剪
 	// 3.1 视口 (起点, 宽高, 近远平面)
-	vk::Viewport viewport(0, 0, Context::GetInstance().swapchain->GetExtent().width, Context::GetInstance().swapchain->GetExtent().height, 0, 1);
+	vk::Viewport viewport(0, 0, Context::Instance().swapchain->GetExtent().width, Context::Instance().swapchain->GetExtent().height, 0, 1);
 	vk::PipelineViewportStateCreateInfo viewportInfo;
 	viewportInfo.setViewports(viewport);
 	// 3.2 画中画
-	vk::Rect2D scissor({ 0, 0 }, Context::GetInstance().swapchain->GetExtent());
+	vk::Rect2D scissor({ 0, 0 }, Context::Instance().swapchain->GetExtent());
 	viewportInfo.setScissors(scissor);
 	createInfo.setPViewportState(&viewportInfo);
 
 	// 4. 光栅化
 	vk::PipelineRasterizationStateCreateInfo rastInfo;
-	rastInfo.setRasterizerDiscardEnable(false)			// 是否忽略光栅化结果
-		.setCullMode(vk::CullModeFlagBits::eFront)		// 剔除背面
+	rastInfo.setCullMode(vk::CullModeFlagBits::eFront)	// 剔除正面
 		.setFrontFace(vk::FrontFace::eCounterClockwise)	// 设置正面方向: 顺时针
 		.setDepthClampEnable(false)						// 是否启用深度截取
 		.setLineWidth(1)								// 线宽
-		.setPolygonMode(vk::PolygonMode::eFill);		// 多边形填充模式: 填充
+		.setPolygonMode(vk::PolygonMode::eFill)		// 多边形填充模式: 填充
+		.setRasterizerDiscardEnable(false);			// 是否忽略光栅化结果
 	createInfo.setPRasterizationState(&rastInfo);
 
 	// 5. 多重采样
@@ -126,14 +117,10 @@ vk::Pipeline RenderProcess::createGraphicsPipeline(const std::vector<char>& vert
 
 
 	/* 创建 pipeline */
-	auto result = Context::GetInstance().device.createGraphicsPipeline(nullptr, createInfo);
+	auto result = Context::Instance().device.createGraphicsPipeline(nullptr, createInfo);
 	if (result.result != vk::Result::eSuccess) {
 		std::cout << "create graphics pipeline failed: " << result.result << std::endl;
 	}
-
-	/* 释放着色器模块 */
-	Context::GetInstance().device.destroyShaderModule(vertexModule);
-	Context::GetInstance().device.destroyShaderModule(fragModule);
 
 	return result.value;
 }
@@ -142,7 +129,7 @@ vk::RenderPass RenderProcess::createRenderPass() {
 	vk::RenderPassCreateInfo createInfo;
 	/* 附件描述 */
 	vk::AttachmentDescription attachDesc;
-	attachDesc.setFormat(Context::GetInstance().swapchain->GetFormat().format)
+	attachDesc.setFormat(Context::Instance().swapchain->GetFormat().format)
 		.setSamples(vk::SampleCountFlagBits::e1)	// 采样数量
 		.setLoadOp(vk::AttachmentLoadOp::eClear)	// 颜色缓冲: 加载时清空
 		.setStoreOp(vk::AttachmentStoreOp::eStore)	// 颜色缓冲: 存储时保留	
@@ -159,7 +146,6 @@ vk::RenderPass RenderProcess::createRenderPass() {
 	vk::SubpassDescription subpassDesc;
 	subpassDesc.setColorAttachments(reference)					 // 颜色附件
 		.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics); // 绑定在哪一类流水线上
-		
 	createInfo.setSubpasses(subpassDesc);
 	
 	/* 子通道依赖 */
@@ -172,14 +158,7 @@ vk::RenderPass RenderProcess::createRenderPass() {
 	createInfo.setDependencies(dependency);
 
 	/* 创建渲染流程 */
-	return Context::GetInstance().device.createRenderPass(createInfo);
+	return Context::Instance().device.createRenderPass(createInfo);
 }
 
-vk::DescriptorSetLayout RenderProcess::createSetLayout() {
-	vk::DescriptorSetLayoutCreateInfo createInfo;
-	auto binding = Uniform::GetBinding();
-	createInfo.setBindings(binding);
-
-	return Context::GetInstance().device.createDescriptorSetLayout(createInfo);
-}
 }

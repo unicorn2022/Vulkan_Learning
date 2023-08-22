@@ -12,6 +12,7 @@
 #include "render_process.h"
 #include "tool.h"
 #include "command_manager.h"
+#include "shader.h"
 
 namespace toy2d {
 
@@ -22,16 +23,7 @@ public:
 
 	static void Init(const std::vector<const char*> extensions, GetSurfaceCallback cb);
 	static void Quit();
-	static Context& GetInstance();
-
-	// 初始化渲染流程
-	void initRenderProcess();
-	// 初始化交换链
-	void initSwapchain(int w, int h);
-	// 初始化图形管线
-	void initGraphicsPipeline();
-	// 初始化命令池
-	void initCommandPool();
+	static Context& Instance();
 
 public:
 	struct QueueInfo {
@@ -56,6 +48,24 @@ public:
 	std::unique_ptr<Swapchain> swapchain;			// 交换链
 	std::unique_ptr<RenderProcess> renderProcess;	// 渲染管线
 	std::unique_ptr<CommandManager> commandManager;	// 命令管理器
+	std::unique_ptr<Shader> shader;					// 着色器
+
+public:
+	// 初始化渲染流程
+	void initRenderProcess();
+	// 初始化交换链
+	void initSwapchain(int w, int h);
+	// 初始化图形管线
+	void initGraphicsPipeline();
+	// 初始化命令池
+	void initCommandPool();
+	// 初始化着色器模块
+	void initShaderModules();
+
+private:
+	static Context* instance_;
+	vk::SurfaceKHR surface_;					// 用于显示的窗口
+	GetSurfaceCallback getSurfaceCb_ = nullptr;	// 获取窗口的回调函数
 
 private:
 	Context(const std::vector<const char*> extensions, GetSurfaceCallback cb);
@@ -69,11 +79,6 @@ private:
 	vk::Device  createDevice(vk::SurfaceKHR surface);
 	// 查询物理设备支持的命令队列
 	void queryQueueInfo(vk::SurfaceKHR surface);
-
-private:
-	static Context* instance_;
-	vk::SurfaceKHR surface_;					// 用于显示的窗口
-	GetSurfaceCallback getSurfaceCb_ = nullptr;	// 获取窗口的回调函数
 };
 
 }

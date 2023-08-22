@@ -1,31 +1,25 @@
 #pragma once
 
-#include "vulkan/vulkan.hpp"
+#include "context.h"
 
 namespace toy2d {
 
-class Buffer final {
-public:
-	Buffer(size_t size, vk::BufferUsageFlags usage, vk::MemoryPropertyFlags property);
+struct Buffer {
+	vk::Buffer buffer;		// 缓冲区
+	vk::DeviceMemory memory;// 缓冲区内存
+	void* map;				// 缓冲区映射地址	
+	size_t size;			// 缓冲区大小
+	size_t requireSize;		// 缓冲区需要的大小
+
+	Buffer(vk::BufferUsageFlags usage, size_t size, vk::MemoryPropertyFlags memProperty);
 	~Buffer();
 
-public:
-	struct MemoryInfo final {
-		size_t size;
-		uint32_t index;
-	};
-	vk::Buffer buffer;		// 缓冲
-	vk::DeviceMemory memory;// 缓冲内存
-	size_t size;			// 缓冲大小s
+	Buffer(const Buffer&) = delete;
+	Buffer& operator=(const Buffer&) = delete;
 
 private:
-	// 创建缓冲
-	void createBuffer(size_t size, vk::BufferUsageFlags usage);
-	// 申请内存
-	void allocateMemory(MemoryInfo info);
-	// 绑定内存到缓冲
-	void bindingMemory2Buffer();
-	// 查询内存信息
-	MemoryInfo queryMemoryInfo(vk::MemoryPropertyFlags property);
+	// 查询缓冲区内存类型索引
+	std::uint32_t queryBufferMemTypeIndex(std::uint32_t requirementBit, vk::MemoryPropertyFlags);
 };
+
 }
