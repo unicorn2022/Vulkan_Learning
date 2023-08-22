@@ -58,7 +58,7 @@ void MainLoop() {
 	context.x = 100;
 	context.y = 100;
 	context.renderer = toy2d::GetRenderer();
-	context.renderer->SetDrawColor(toy2d::Color{ 0, 1, 0 });
+	context.renderer->SetDrawColor(toy2d::Color{ 1, 1, 1 });
 
     while (!context.shouldClose) {
 		// 处理SDL事件
@@ -67,7 +67,7 @@ void MainLoop() {
 		// 绘制矩形
 		context.renderer->DrawRect(toy2d::Rect{
 			toy2d::Vec{context.x, context.y},
-			toy2d::Size{200, 300} 
+			toy2d::Size{250, 272} 
 		});
     }
 }

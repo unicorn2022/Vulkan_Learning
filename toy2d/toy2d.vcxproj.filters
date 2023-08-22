@@ -54,6 +54,9 @@
     <ClCompile Include="src\shader.cpp">
       <Filter>源文件\toy2d</Filter>
     </ClCompile>
+    <ClCompile Include="src\texture.cpp">
+      <Filter>源文件\toy2d</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\context.h">
@@ -84,6 +87,12 @@
       <Filter>头文件\toy2d</Filter>
     </ClInclude>
     <ClInclude Include="include\shader.h">
+      <Filter>头文件\toy2d</Filter>
+    </ClInclude>
+    <ClInclude Include="include\stb_image.h">
+      <Filter>头文件\toy2d</Filter>
+    </ClInclude>
+    <ClInclude Include="include\texture.h">
       <Filter>头文件\toy2d</Filter>
     </ClInclude>
   </ItemGroup>

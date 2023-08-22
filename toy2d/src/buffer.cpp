@@ -19,7 +19,7 @@ Buffer::Buffer(vk::BufferUsageFlags usage, size_t size, vk::MemoryPropertyFlags 
     auto requirements = device.getBufferMemoryRequirements(buffer);
     requireSize = requirements.size;
     // 2. 查询缓冲内存类型
-    auto index = queryBufferMemTypeIndex(requirements.memoryTypeBits, memProperty);
+    auto index = QueryBufferMemTypeIndex(requirements.memoryTypeBits, memProperty);
     // 3. 分配缓冲内存
     vk::MemoryAllocateInfo allocInfo;
     allocInfo.setMemoryTypeIndex(index)         // 内存类型
@@ -44,7 +44,7 @@ Buffer::~Buffer() {
     device.destroyBuffer(buffer);
 }
 
-std::uint32_t Buffer::queryBufferMemTypeIndex(std::uint32_t type, vk::MemoryPropertyFlags flag) {
+std::uint32_t QueryBufferMemTypeIndex(std::uint32_t type, vk::MemoryPropertyFlags flag) {
     auto property = Context::Instance().phyDevice.getMemoryProperties();
 
     for (std::uint32_t i = 0; i < property.memoryTypeCount; i++) {

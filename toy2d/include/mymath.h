@@ -5,19 +5,24 @@
 
 namespace toy2d {
 
-struct Vec {
+struct Vec final{
 	union {
 		struct { float x, y; };
 		struct { float w, h; };
 	};
 
     // 获取vertex input属性描述信息
-	static vk::VertexInputAttributeDescription GetAttributeDescription();
+    static std::vector<vk::VertexInputAttributeDescription> GetAttributeDescription();
     // 获取vertex input绑定描述信息
-	static vk::VertexInputBindingDescription GetBindingDescription();
+    static std::vector<vk::VertexInputBindingDescription> GetBindingDescription();
 };
 
-struct Color {
+struct Vertex final {
+    Vec position;
+    Vec texcoord;
+};
+
+struct Color final {
 	float r, g, b;
 };
 

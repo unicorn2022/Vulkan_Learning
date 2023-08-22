@@ -2,19 +2,23 @@
 
 namespace toy2d {
 
-vk::VertexInputAttributeDescription Vec::GetAttributeDescription() {
-    vk::VertexInputAttributeDescription description;
-    description.setBinding(0)
+std::vector<vk::VertexInputAttributeDescription> Vec::GetAttributeDescription() {
+    std::vector<vk::VertexInputAttributeDescription> description(2);
+    description[0].setBinding(0)
         .setFormat(vk::Format::eR32G32Sfloat)
         .setLocation(0)
         .setOffset(0);
+    description[1].setBinding(0)
+        .setFormat(vk::Format::eR32G32Sfloat)
+        .setLocation(1)
+        .setOffset(offsetof(Vertex, texcoord));
     return description;
 }
 
-vk::VertexInputBindingDescription Vec::GetBindingDescription() {
-    vk::VertexInputBindingDescription description;
-    description.setBinding(0)
-        .setStride(sizeof(float) * 2)
+std::vector<vk::VertexInputBindingDescription> Vec::GetBindingDescription() {
+    std::vector<vk::VertexInputBindingDescription> description(1);
+    description[0].setBinding(0)
+        .setStride(sizeof(Vertex))
         .setInputRate(vk::VertexInputRate::eVertex);
 
     return description;

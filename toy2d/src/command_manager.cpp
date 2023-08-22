@@ -41,5 +41,24 @@ void CommandManager::FreeCommand(vk::CommandBuffer buf) {
 	Context::Instance().device.freeCommandBuffers(pool_, buf);
 }
 
+void CommandManager::ExecuteCommand(vk::Queue queue, RecordCmdFunc func) {
+	auto cmdBuf = CreateOneCommandBuffer();
 
+	// 创建command buffer, 由func写入命令
+	vk::CommandBufferBeginInfo beginInfo;
+	beginInfo.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+	cmdBuf.begin(beginInfo);
+	{
+		if (func) func(cmdBuf);
+	}
+	cmdBuf.end();
+
+	// 提交命令, 并等待执行完成
+	vk::SubmitInfo submitInfo;
+	submitInfo.setCommandBuffers(cmdBuf);
+	queue.submit(submitInfo);
+	queue.waitIdle();
+	Context::Instance().device.waitIdle();
+	FreeCommand(cmdBuf);
+}
 }

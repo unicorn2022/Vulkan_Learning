@@ -16,6 +16,9 @@ Renderer::Renderer(int maxFlightCount){
 	createBuffers();						// 创建缓冲区
 	createUniformBuffer(maxFlightCount);	// 创建Uniform缓冲区
 	bufferData();							// 将数据拷贝到缓冲区
+
+	createTexture();	// 创建纹理
+	createSampler();	// 创建采样器
 	
 	
 	createDescriptorPool(maxFlightCount);	// 创建描述符池
@@ -29,7 +32,9 @@ Renderer::Renderer(int maxFlightCount){
 
 Renderer::~Renderer(){
 	auto& device = Context::Instance().device;
-
+	
+	device.destroySampler(sampler);
+	texture.reset();
 	device.destroyDescriptorPool(descriptorPool_);
 	verticesBuffer_.reset();
 	indicesBuffer_.reset();
@@ -160,12 +165,12 @@ void Renderer::createCmdBuffers() {
 void Renderer::createBuffers() {
 	verticesBuffer_.reset(new Buffer(
 		vk::BufferUsageFlagBits::eVertexBuffer,
-		sizeof(float) * 8,
+		sizeof(Vertex) * 4,
 		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent // CPU可见, CPU与GPU共享
 	));
 	indicesBuffer_.reset(new Buffer(
 		vk::BufferUsageFlagBits::eIndexBuffer,
-		sizeof(float) * 6,
+		sizeof(uint32_t) * 6,
 		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent // CPU可见, CPU与GPU共享
 	));
 }
@@ -211,29 +216,14 @@ void Renderer::createUniformBuffer(int flightCount) {
 }
 
 void Renderer::transformBuffer2Device(Buffer& src, Buffer& dst, size_t srcOffset, size_t dstOffset, size_t size) {
-	// 使用命令缓冲区进行数据传输
-	auto cmdBuf = Context::Instance().commandManager->CreateOneCommandBuffer();
-	vk::CommandBufferBeginInfo begin;
-	begin.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-	cmdBuf.begin(begin);
-	{
-		vk::BufferCopy region;
-		region.setSize(size)
-			.setSrcOffset(srcOffset)
-			.setDstOffset(dstOffset);
-		cmdBuf.copyBuffer(src.buffer, dst.buffer, region);
-	}
-	cmdBuf.end();
-
-	// 提交命令
-	vk::SubmitInfo submit;
-	submit.setCommandBuffers(cmdBuf);
-	Context::Instance().graphicsQueue.submit(submit);
-	// 等待命令执行完毕
-	Context::Instance().graphicsQueue.waitIdle();
-	Context::Instance().device.waitIdle();
-	// 释放命令缓冲区
-	Context::Instance().commandManager->FreeCommand(cmdBuf);
+	Context::Instance().commandManager->ExecuteCommand(Context::Instance().graphicsQueue, 
+		[&](vk::CommandBuffer cmdBuf) {
+			vk::BufferCopy region;
+			region.setSize(size)
+				.setSrcOffset(srcOffset)
+				.setDstOffset(dstOffset);
+			cmdBuf.copyBuffer(src.buffer, dst.buffer, region);
+		});
 }
 
 std::uint32_t Renderer::queryBufferMemTypeIndex(std::uint32_t type, vk::MemoryPropertyFlags flag) {
@@ -255,11 +245,11 @@ void Renderer::bufferData() {
 }
 
 void Renderer::bufferVertexData() {
-	Vec vertices[] = {
-		Vec{{-0.5, -0.5}},
-		Vec{{0.5, -0.5}},
-		Vec{{0.5, 0.5}},
-		Vec{{-0.5, 0.5}},
+	Vertex vertices[] = {
+		{Vec{-0.5, -0.5}, Vec{0, 0}},
+		{Vec{0.5, -0.5} , Vec{1, 0}},
+		{Vec{0.5, 0.5}  , Vec{1, 1}},
+		{Vec{-0.5, 0.5} , Vec{0, 1}},
 	};
 	memcpy(verticesBuffer_->map, vertices, sizeof(vertices));
 }
@@ -307,13 +297,12 @@ void Renderer::SetProject(int right, int left, int bottom, int top, int far, int
 void Renderer::createDescriptorPool(int flightCount) {
 	// 描述符集: 包含多个描述符子
 	// 描述符子: 对应shader中的uniform变量
-	vk::DescriptorPoolSize size;
-	size.setType(vk::DescriptorType::eUniformBuffer)
-		.setDescriptorCount(flightCount); // 总共创建多少个描述符子
-
-	// 一共有2个uniform
-	std::vector<vk::DescriptorPoolSize> sizes(2, size);
-	
+	std::vector<vk::DescriptorPoolSize> sizes(2);
+	sizes[0].setType(vk::DescriptorType::eUniformBuffer)
+		.setDescriptorCount(flightCount * 2); // 总共创建多少个描述符子
+	sizes[1].setType(vk::DescriptorType::eCombinedImageSampler)
+		.setDescriptorCount(flightCount);
+		
 	vk::DescriptorPoolCreateInfo createInfo;
 	createInfo.setMaxSets(flightCount) // 最大描述符集个数, 多少帧就需要创建多少个描述符集
 		.setPoolSizes(sizes);
@@ -344,7 +333,7 @@ void Renderer::updateDescriptorSets() {
 			.setOffset(0)
 			.setRange(sizeof(Mat4) * 2);
 
-		std::vector<vk::WriteDescriptorSet> writeInfos(2);
+		std::vector<vk::WriteDescriptorSet> writeInfos(3);
 		writeInfos[0].setBufferInfo(bufferInfo)	// 关联的buffer
 			.setDstBinding(0)					// 和哪个binding关联
 			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
@@ -365,8 +354,40 @@ void Renderer::updateDescriptorSets() {
 			.setDstArrayElement(0)					// 描述符集中的第几个描述符子
 			.setDstSet(descriptorSets_[i]);			// 和哪个描述符集关联
 
+		// 绑定纹理
+		vk::DescriptorImageInfo imageInfo;
+		imageInfo.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
+			.setImageView(texture->view)
+			.setSampler(sampler);
+
+		writeInfos[2].setImageInfo(imageInfo)
+			.setDstBinding(2)
+			.setDstArrayElement(0)
+			.setDescriptorCount(1)
+			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+			.setDstSet(descriptorSets_[i]);
+
 		Context::Instance().device.updateDescriptorSets(writeInfos, {});
 	}
+}
+
+void Renderer::createTexture() {
+	texture.reset(new Texture("./img/avatar.png"));
+}
+
+void Renderer::createSampler() {
+	vk::SamplerCreateInfo createInfo;
+	createInfo.setMagFilter(vk::Filter::eLinear)			// 放大过滤器: 线性插值
+		.setMinFilter(vk::Filter::eLinear)					// 缩小过滤器: 线性插值
+		.setAddressModeU(vk::SamplerAddressMode::eRepeat)	// U轴采样: 重复
+		.setAddressModeV(vk::SamplerAddressMode::eRepeat)	// V轴采样: 重复
+		.setAddressModeW(vk::SamplerAddressMode::eRepeat)	// W轴采样: 重复
+		.setAnisotropyEnable(false)							// 启用各向异性过滤
+		.setBorderColor(vk::BorderColor::eIntOpaqueBlack)	// 边界颜色
+		.setUnnormalizedCoordinates(false)					// 是否不使用归一化坐标
+		.setCompareEnable(false)							// 是否启用比较
+		.setMipmapMode(vk::SamplerMipmapMode::eLinear);		// Mipmap过滤模式
+	sampler = Context::Instance().device.createSampler(createInfo);
 }
 
 }

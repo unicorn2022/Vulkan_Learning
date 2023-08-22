@@ -6,6 +6,7 @@
 #include "swapchain.h"
 #include "mymath.h"
 #include "buffer.h"
+#include "texture.h"
 #include <limits>
 
 namespace toy2d {
@@ -21,6 +22,11 @@ public:
 
 
 private:
+	// fence: CPU 和 GPU 之间的同步
+	// semaphore: GPU 的 Command Queue 之间的同步
+	// event: CPU 和 GPU 之间发送信号进行同步
+	// barrier: 用于隔离命令的执行
+	
 	/* 命令 */
 	// 创建命令缓冲区是否可用的信号量
 	void createFence();
@@ -57,6 +63,12 @@ private:
 	// 更新描述符集: 将uniform缓冲区绑定到描述符集
 	void updateDescriptorSets();
 	
+	/* 创建纹理 */
+	// 创建纹理采样器
+	void createSampler();
+	// 创建纹理
+	void createTexture();
+
 	/* 工具函数 */
 	// 将数据从srcBuffer拷贝到dstBuffer
 	void transformBuffer2Device(Buffer& src, Buffer& dst, size_t srcOffset, size_t dstOffset, size_t size);
@@ -88,5 +100,9 @@ private:
 	std::vector<std::unique_ptr<Buffer>> colorBuffers_;			// 颜色缓冲区
 	std::vector<std::unique_ptr<Buffer>> deviceUniformBuffers_;	// (GPU)uniform缓冲区
 	std::vector<std::unique_ptr<Buffer>> deviceColorBuffers_;	// (GPU)颜色缓冲区
+
+	/* 纹理 */
+	std::unique_ptr<Texture> texture;
+	vk::Sampler sampler;
 };
 }

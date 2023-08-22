@@ -17,9 +17,8 @@ struct Buffer {
 	Buffer(const Buffer&) = delete;
 	Buffer& operator=(const Buffer&) = delete;
 
-private:
-	// 查询缓冲区内存类型索引
-	std::uint32_t queryBufferMemTypeIndex(std::uint32_t requirementBit, vk::MemoryPropertyFlags);
 };
 
+// 查询缓冲区内存类型索引
+std::uint32_t QueryBufferMemTypeIndex(std::uint32_t requirementBit, vk::MemoryPropertyFlags);
 }

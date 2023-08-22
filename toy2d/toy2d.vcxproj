@@ -156,6 +156,7 @@
     <ClCompile Include="src\render_process.cpp" />
     <ClCompile Include="src\shader.cpp" />
     <ClCompile Include="src\swapchain.cpp" />
+    <ClCompile Include="src\texture.cpp" />
     <ClCompile Include="src\tool.cpp" />
     <ClCompile Include="src\toy2d.cpp" />
   </ItemGroup>
@@ -167,7 +168,9 @@
     <ClInclude Include="include\renderer.h" />
     <ClInclude Include="include\render_process.h" />
     <ClInclude Include="include\shader.h" />
+    <ClInclude Include="include\stb_image.h" />
     <ClInclude Include="include\swapchain.h" />
+    <ClInclude Include="include\texture.h" />
     <ClInclude Include="include\tool.h" />
     <ClInclude Include="include\toy2d.h" />
   </ItemGroup>
