@@ -16,13 +16,8 @@ Renderer::Renderer(int maxFlightCount){
 	createBuffers();						// 创建缓冲区
 	createUniformBuffer(maxFlightCount);	// 创建Uniform缓冲区
 	bufferData();							// 将数据拷贝到缓冲区
-
-	createTexture();	// 创建纹理
-	createSampler();	// 创建采样器
 	
-	
-	createDescriptorPool(maxFlightCount);	// 创建描述符池
-	allocDescriptorSets(maxFlightCount);	// 分配描述符集
+	descriptorSets_ = DescriptorSetManager::Instance().AllocBufferSets(maxFlightCount);
 	updateDescriptorSets();					// 更新描述符集, 将Uniform缓冲区绑定到描述符集
 
 	
@@ -34,8 +29,6 @@ Renderer::~Renderer(){
 	auto& device = Context::Instance().device;
 	
 	device.destroySampler(sampler);
-	texture.reset();
-	device.destroyDescriptorPool(descriptorPool_);
 	verticesBuffer_.reset();
 	indicesBuffer_.reset();
 	uniformBuffers_.clear();
@@ -50,68 +43,89 @@ Renderer::~Renderer(){
 	
 }
 
-void Renderer::DrawRect(const Rect& rect) {
+void Renderer::DrawTexture(const Rect& rect, Texture& texture) {
+	auto& device = Context::Instance().device;
+	auto& cmd = cmdBufs_[curFrame_];
+
+	// 3.2.2 绑定vertex&index缓冲区
+	vk::DeviceSize offset = 0;
+	cmd.bindVertexBuffers(0, verticesBuffer_->buffer, offset);
+	cmd.bindIndexBuffer(indicesBuffer_->buffer, 0, vk::IndexType::eUint32);
+	
+	// 3.2.3 绑定描述符集(uniform)
+	auto& layout = Context::Instance().renderProcess->layout;
+	cmd.bindDescriptorSets(
+		vk::PipelineBindPoint::eGraphics, 
+		layout, 0, 
+		{ descriptorSets_[curFrame_].set, texture.set.set }, // uniform变量的set, 纹理的set
+		{}
+	);
+
+	// 3.2.4 传输push constanst
+	auto model = Mat4::CreateTranslate(rect.position).Mul(Mat4::CreateScale(rect.size));
+	cmd.pushConstants(layout, vk::ShaderStageFlagBits::eVertex, 0, sizeof(Mat4), model.GetData());
+	
+	// 3.2.4 绘制三角形
+	cmd.drawIndexed(6, 1, 0, 0, 0);
+}
+
+void Renderer::StartRender() {
 	auto& device = Context::Instance().device;
 	auto& renderProcess = Context::Instance().renderProcess;
 	auto& swapchain = Context::Instance().swapchain;
-	auto& cmdMgr = Context::Instance().commandManager;
 	auto& cmd = cmdBufs_[curFrame_];
-	
+
 	// 0. 等待之前的命令执行完毕
-	if (device.waitForFences(fences_[curFrame_], true, std::numeric_limits<uint64_t>::max()) != vk::Result::eSuccess) 
+	if (device.waitForFences(fences_[curFrame_], true, std::numeric_limits<uint64_t>::max()) != vk::Result::eSuccess)
 		throw std::runtime_error("wait for fence failed");
 	device.resetFences(fences_[curFrame_]);
 
-	
+
 	// 1. 获取下一张图片
 	auto result = device.acquireNextImageKHR(
 		Context::Instance().swapchain->swapchain,	// 交换链
-		std::numeric_limits<uint64_t>::max(),			// 最大等待时间
-		imageAvaliableSems_[curFrame_],					// 信号量: 图片是否可用
+		std::numeric_limits<uint64_t>::max(),		// 最大等待时间
+		imageAvaliableSems_[curFrame_],				// 信号量: 图片是否可用
 		nullptr
 	);
-	if (result.result != vk::Result::eSuccess) 
+	if (result.result != vk::Result::eSuccess)
 		throw std::runtime_error("wait for image in swapchain failed");
-	auto imageIndex = result.value;
+	imageIndex_ = result.value;
 
 	// 2. 重置command buffer
 	cmd.reset();
 
 	// 3. 传输命令
+	// 3.0 开始命令
 	vk::CommandBufferBeginInfo beginInfo;
 	beginInfo.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit); // 仅提交一次命令
 	cmd.begin(beginInfo);
-	{
-		// 3.1 配置渲染流程
-		vk::ClearValue clearValue;
-		clearValue.color = vk::ClearColorValue(std::array<float, 4>{0.1f, 0.1f, 0.1f, 1.0f});
-		vk::RenderPassBeginInfo renderPassBeginInfo;
-		vk::Rect2D area({ 0,0 }, swapchain->GetExtent());
-		renderPassBeginInfo.setRenderPass(renderProcess->renderPass)// 渲染流程, 此处只是用了它的配置
-			.setFramebuffer(swapchain->framebuffers[imageIndex])	// 渲染到哪个framebuffer
-			.setClearValues(clearValue)								// 用什么颜色清屏
-			.setRenderArea(area);									// 渲染区域
+	
+	// 3.1 配置渲染流程
+	vk::ClearValue clearValue;
+	clearValue.color = vk::ClearColorValue(std::array<float, 4>{0.1f, 0.1f, 0.1f, 1.0f});
+	vk::RenderPassBeginInfo renderPassBeginInfo;
+	vk::Rect2D area({ 0,0 }, swapchain->GetExtent());
+	renderPassBeginInfo.setRenderPass(renderProcess->renderPass)// 渲染流程, 此处只是用了它的配置
+		.setFramebuffer(swapchain->framebuffers[imageIndex_])	// 渲染到哪个framebuffer
+		.setClearValues(clearValue)								// 用什么颜色清屏
+		.setRenderArea(area);									// 渲染区域
+
+	// 3.2 开始渲染流程
+	cmd.beginRenderPass(&renderPassBeginInfo, vk::SubpassContents::eInline);
 		
-		// 3.2 开始渲染流程
-		cmd.beginRenderPass(&renderPassBeginInfo, vk::SubpassContents::eInline);
-		{
-			// 3.2.1 绑定 Pipeline
-			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, renderProcess->graphicsPipeline);
-			// 3.2.2 绑定vertex&index缓冲区
-			vk::DeviceSize offset = 0;
-			cmd.bindVertexBuffers(0, verticesBuffer_->buffer, offset);
-			cmd.bindIndexBuffer(indicesBuffer_->buffer, 0, vk::IndexType::eUint32);
-			// 3.2.3 绑定描述符集(uniform)
-			auto& layout = Context::Instance().renderProcess->layout;
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, layout, 0, descriptorSets_[curFrame_], {});
-			// 3.2.4 传输push constanst
-			auto model = Mat4::CreateTranslate(rect.position).Mul(Mat4::CreateScale(rect.size));
-			cmd.pushConstants(layout, vk::ShaderStageFlagBits::eVertex, 0, sizeof(Mat4), model.GetData());
-			// 3.2.4 绘制三角形
-			cmd.drawIndexed(6, 1, 0, 0, 0);
-		}
-		cmd.endRenderPass();
-	}
+	// 3.2.1 绑定 Pipeline
+	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, renderProcess->graphicsPipeline);
+
+}
+
+void Renderer::EndRender() {
+	auto& swapchain = Context::Instance().swapchain;
+	auto& cmd = cmdBufs_[curFrame_];
+
+	// 3.3 结束渲染流程
+	cmd.endRenderPass();
+	// 3.4 结束命令
 	cmd.end();
 
 	// 4. 提交命令
@@ -127,11 +141,11 @@ void Renderer::DrawRect(const Rect& rect) {
 	vk::PresentInfoKHR presentInfo;
 	presentInfo.setWaitSemaphores(renderFinishSems_[curFrame_])	// 等待图片绘制完成
 		.setSwapchains(swapchain->swapchain)					// 交换链
-		.setImageIndices(imageIndex);							// 要显示的图片
-		
+		.setImageIndices(imageIndex_);							// 要显示的图片
 	if (Context::Instance().presentQueue.presentKHR(presentInfo) != vk::Result::eSuccess)
 		throw std::runtime_error("image present failed");
 
+	// 6. 切换到下一帧
 	curFrame_ = (curFrame_ + 1) % maxFlightCount_;
 }
 
@@ -294,52 +308,21 @@ void Renderer::SetProject(int right, int left, int bottom, int top, int far, int
 	bufferMVPData();
 }
 
-void Renderer::createDescriptorPool(int flightCount) {
-	// 描述符集: 包含多个描述符子
-	// 描述符子: 对应shader中的uniform变量
-	std::vector<vk::DescriptorPoolSize> sizes(2);
-	sizes[0].setType(vk::DescriptorType::eUniformBuffer)
-		.setDescriptorCount(flightCount * 2); // 总共创建多少个描述符子
-	sizes[1].setType(vk::DescriptorType::eCombinedImageSampler)
-		.setDescriptorCount(flightCount);
-		
-	vk::DescriptorPoolCreateInfo createInfo;
-	createInfo.setMaxSets(flightCount) // 最大描述符集个数, 多少帧就需要创建多少个描述符集
-		.setPoolSizes(sizes);
-
-	descriptorPool_ = Context::Instance().device.createDescriptorPool(createInfo);
-}
-
-std::vector<vk::DescriptorSet> Renderer::allocDescriptorSet(int flightCount) {
-	std::vector<vk::DescriptorSetLayout> layouts(flightCount, Context::Instance().shader->GetDescriptorSetLayouts()[0]);
-	
-	vk::DescriptorSetAllocateInfo allocInfo;
-	allocInfo.setDescriptorPool(descriptorPool_)	// 描述符集池
-		.setDescriptorSetCount(flightCount)		// 描述符集个数
-		.setSetLayouts(layouts);					// 描述符集布局: 有多少个描述符集, 就需要有多少个layout
-
-	return Context::Instance().device.allocateDescriptorSets(allocInfo);
-}
-
-void Renderer::allocDescriptorSets(int flightCount) {
-	descriptorSets_ = allocDescriptorSet(flightCount);
-}
-
 void Renderer::updateDescriptorSets() {
 	for (int i = 0; i < descriptorSets_.size(); i++) {
 		// 绑定 MVP uniform buffer
-		vk::DescriptorBufferInfo bufferInfo;
-		bufferInfo.setBuffer(deviceUniformBuffers_[i]->buffer)
+		vk::DescriptorBufferInfo bufferInfo1;
+		bufferInfo1.setBuffer(deviceUniformBuffers_[i]->buffer)
 			.setOffset(0)
 			.setRange(sizeof(Mat4) * 2);
 
-		std::vector<vk::WriteDescriptorSet> writeInfos(3);
-		writeInfos[0].setBufferInfo(bufferInfo)	// 关联的buffer
+		std::vector<vk::WriteDescriptorSet> writeInfos(2);
+		writeInfos[0].setBufferInfo(bufferInfo1)// 关联的buffer
 			.setDstBinding(0)					// 和哪个binding关联
 			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 			.setDescriptorCount(1)				// 描述符子个数
 			.setDstArrayElement(0)				// 描述符集中的第几个描述符子
-			.setDstSet(descriptorSets_[i]);		// 和哪个描述符集关联
+			.setDstSet(descriptorSets_[i].set);	// 和哪个描述符集关联
 
 		// 绑定颜色 uniform buffer
 		vk::DescriptorBufferInfo bufferInfo2;
@@ -352,43 +335,10 @@ void Renderer::updateDescriptorSets() {
 			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 			.setDescriptorCount(1)					// 描述符子个数
 			.setDstArrayElement(0)					// 描述符集中的第几个描述符子
-			.setDstSet(descriptorSets_[i]);			// 和哪个描述符集关联
-
-		// 绑定纹理
-		vk::DescriptorImageInfo imageInfo;
-		imageInfo.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
-			.setImageView(texture->view)
-			.setSampler(sampler);
-
-		writeInfos[2].setImageInfo(imageInfo)
-			.setDstBinding(2)
-			.setDstArrayElement(0)
-			.setDescriptorCount(1)
-			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-			.setDstSet(descriptorSets_[i]);
+			.setDstSet(descriptorSets_[i].set);		// 和哪个描述符集关联
 
 		Context::Instance().device.updateDescriptorSets(writeInfos, {});
 	}
-}
-
-void Renderer::createTexture() {
-	texture.reset(new Texture("./img/avatar.png"));
-	//texture.reset(new Texture("./img/role.png"));
-}
-
-void Renderer::createSampler() {
-	vk::SamplerCreateInfo createInfo;
-	createInfo.setMagFilter(vk::Filter::eLinear)			// 放大过滤器: 线性插值
-		.setMinFilter(vk::Filter::eLinear)					// 缩小过滤器: 线性插值
-		.setAddressModeU(vk::SamplerAddressMode::eRepeat)	// U轴采样: 重复
-		.setAddressModeV(vk::SamplerAddressMode::eRepeat)	// V轴采样: 重复
-		.setAddressModeW(vk::SamplerAddressMode::eRepeat)	// W轴采样: 重复
-		.setAnisotropyEnable(false)							// 启用各向异性过滤
-		.setBorderColor(vk::BorderColor::eIntOpaqueBlack)	// 边界颜色
-		.setUnnormalizedCoordinates(false)					// 是否不使用归一化坐标
-		.setCompareEnable(false)							// 是否启用比较
-		.setMipmapMode(vk::SamplerMipmapMode::eLinear);		// Mipmap过滤模式
-	sampler = Context::Instance().device.createSampler(createInfo);
 }
 
 }

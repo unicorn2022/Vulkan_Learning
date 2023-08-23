@@ -7,6 +7,8 @@ struct MyContext {
 	bool shouldClose = false;
 	float x, y; 
 	toy2d::Renderer* renderer;
+	toy2d::Texture* texture1;
+	toy2d::Texture* texture2;
 };
 void MainLoop();
 void HandleInput(MyContext& context);
@@ -59,17 +61,28 @@ void MainLoop() {
 	context.y = 100;
 	context.renderer = toy2d::GetRenderer();
 	context.renderer->SetDrawColor(toy2d::Color{ 1, 1, 1 });
+	context.texture1 = toy2d::LoadTexture("./img/avatar.png");
+	context.texture2 = toy2d::LoadTexture("./img/role.png");
 
     while (!context.shouldClose) {
 		// 处理SDL事件
 		HandleInput(context);
        
 		// 绘制矩形
-		context.renderer->DrawRect(toy2d::Rect{
+		context.renderer->StartRender();
+		context.renderer->DrawTexture(toy2d::Rect{
 			toy2d::Vec{context.x, context.y},
-			toy2d::Size{250, 272} 
-		});
+			toy2d::Size{200, 300} 
+		}, *context.texture1);
+		context.renderer->DrawTexture(toy2d::Rect{
+			toy2d::Vec{500, 100},
+			toy2d::Size{200, 300}
+			}, *context.texture2);
+		context.renderer->EndRender();
     }
+
+	toy2d::DestroyTexture(context.texture1);
+	toy2d::DestroyTexture(context.texture2);
 }
 
 void HandleInput(MyContext& context) {

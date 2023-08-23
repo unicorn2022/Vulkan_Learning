@@ -49,6 +49,7 @@ public:
 	std::unique_ptr<RenderProcess> renderProcess;	// 渲染管线
 	std::unique_ptr<CommandManager> commandManager;	// 命令管理器
 	std::unique_ptr<Shader> shader;					// 着色器
+	vk::Sampler sampler;							// 采样器
 
 public:
 	// 初始化渲染流程
@@ -61,6 +62,8 @@ public:
 	void initCommandPool();
 	// 初始化着色器模块
 	void initShaderModules();
+	// 初始化采样器
+	void initSampler();
 
 private:
 	static Context* instance_;

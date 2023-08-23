@@ -13,15 +13,28 @@ void Init(const std::vector<const char*> extensions, Context::GetSurfaceCallback
 	ctx.initGraphicsPipeline();
 	ctx.swapchain->InitFramebuffers();
 	ctx.initCommandPool();
+	ctx.initSampler();
 
-	renderer_  = std::make_unique<Renderer>();
+	int maxFlightCount = 2;
+	DescriptorSetManager::Init(maxFlightCount);
+	renderer_  = std::make_unique<Renderer>(maxFlightCount);
 	renderer_->SetProject(w, 0, 0, h, -1, 1);
 }
 
 void Quit() {
 	Context::Instance().device.waitIdle(); // 等待GPU执行完所有的命令
 	renderer_.reset();
+	TextureManager::Instance().Clear();
+	DescriptorSetManager::Quit();
 	Context::Quit();
+}
+
+Texture* LoadTexture(const std::string& filename) {
+	return TextureManager::Instance().Load(filename);
+}
+
+void DestroyTexture(Texture* texture) {
+	TextureManager::Instance().Destroy(texture);
 }
 
 Renderer* GetRenderer() {

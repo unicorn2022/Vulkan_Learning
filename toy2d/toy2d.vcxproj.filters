@@ -57,6 +57,9 @@
     <ClCompile Include="src\texture.cpp">
       <Filter>源文件\toy2d</Filter>
     </ClCompile>
+    <ClCompile Include="src\descriptor_manager.cpp">
+      <Filter>源文件\toy2d</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\context.h">
@@ -93,6 +96,9 @@
       <Filter>头文件\toy2d</Filter>
     </ClInclude>
     <ClInclude Include="include\texture.h">
+      <Filter>头文件\toy2d</Filter>
+    </ClInclude>
+    <ClInclude Include="include\descriptor_manager.h">
       <Filter>头文件\toy2d</Filter>
     </ClInclude>
   </ItemGroup>

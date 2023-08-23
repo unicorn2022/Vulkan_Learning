@@ -32,8 +32,12 @@ Shader::~Shader() {
 }
 
 void Shader::initDescriptorSetLayouts() {
-	/* Binding 配置 */
-	std::vector<vk::DescriptorSetLayoutBinding> bindings(3);
+	vk::DescriptorSetLayoutCreateInfo createInfo;
+	/* set = 0 的 layout */
+	// 2 个 Binding: 
+	//	vertex shader 的 uniform buffer: view, project
+	//	fragment shader 的 uniform buffer: color
+	std::vector<vk::DescriptorSetLayoutBinding> bindings(2);
 	bindings[0].setBinding(0)
 		.setDescriptorCount(1)
 		.setDescriptorType(vk::DescriptorType::eUniformBuffer)
@@ -42,16 +46,20 @@ void Shader::initDescriptorSetLayouts() {
 		.setDescriptorCount(1)
 		.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 		.setStageFlags(vk::ShaderStageFlagBits::eFragment);
-	bindings[2].setBinding(2)
+	createInfo.setBindings(bindings);
+	// 创建描述符集布局
+	layouts_.push_back(Context::Instance().device.createDescriptorSetLayout(createInfo));
+
+	/* set = 1 的 layout */
+	// 1 个 Binding: 
+	//	fragment shader 的 sampler2D
+	bindings.resize(1);
+	bindings[0].setBinding(0)
 		.setDescriptorCount(1)
 		.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
 		.setStageFlags(vk::ShaderStageFlagBits::eFragment);
-	
-	/* 描述符集布局配置 */
-	vk::DescriptorSetLayoutCreateInfo createInfo;
 	createInfo.setBindings(bindings);
-
-	/* 创建描述符集布局 */
+	// 创建描述符集布局
 	layouts_.push_back(Context::Instance().device.createDescriptorSetLayout(createInfo));
 }
 

@@ -50,6 +50,7 @@ Context::Context(const std::vector<const char*> extensions, GetSurfaceCallback c
 
 Context::~Context() {
 	shader.reset();
+	device.destroySampler(sampler);
 	commandManager.reset();
 	renderProcess.reset();
 	swapchain.reset();
@@ -171,6 +172,21 @@ void Context::initShaderModules() {
 	auto vertexSource = ReadWholeFile("./shader/vert.spv");
 	auto fragSource = ReadWholeFile("./shader/frag.spv");
 	shader = std::make_unique<Shader>(vertexSource, fragSource);
+}
+
+void Context::initSampler() {
+	vk::SamplerCreateInfo createInfo;
+	createInfo.setMagFilter(vk::Filter::eLinear)			// 放大过滤器: 线性插值
+		.setMinFilter(vk::Filter::eLinear)					// 缩小过滤器: 线性插值
+		.setAddressModeU(vk::SamplerAddressMode::eRepeat)	// U轴采样: 重复
+		.setAddressModeV(vk::SamplerAddressMode::eRepeat)	// V轴采样: 重复
+		.setAddressModeW(vk::SamplerAddressMode::eRepeat)	// W轴采样: 重复
+		.setAnisotropyEnable(false)							// 启用各向异性过滤
+		.setBorderColor(vk::BorderColor::eIntOpaqueBlack)	// 边界颜色
+		.setUnnormalizedCoordinates(false)					// 是否不使用归一化坐标
+		.setCompareEnable(false)							// 是否启用比较
+		.setMipmapMode(vk::SamplerMipmapMode::eLinear);		// Mipmap过滤模式
+	sampler = Context::Instance().device.createSampler(createInfo);
 }
 
 }

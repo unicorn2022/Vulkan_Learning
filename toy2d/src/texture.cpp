@@ -40,9 +40,15 @@ Texture::Texture(std::string_view filename) {
 
 	// 释放图形数据
 	stbi_image_free(pixels);
+
+	// 申请descriptor set
+	set = DescriptorSetManager::Instance().AllocImageSet();
+	updateDescriptorSet();
 }
 
 Texture::~Texture() {
+	DescriptorSetManager::Instance().FreeImageSet(set);
+
 	auto& device = Context::Instance().device;
 	device.destroyImageView(view);
 	device.freeMemory(memory);
@@ -152,7 +158,6 @@ void Texture::transitionImageLayoutFromDst2Optimal() {
 		});
 }
 
-
 void Texture::createImageView() {
 	vk::ImageViewCreateInfo createInfo;
 	vk::ComponentMapping mapping;
@@ -170,4 +175,44 @@ void Texture::createImageView() {
 	view = Context::Instance().device.createImageView(createInfo);
 }
 
+void Texture::updateDescriptorSet() {
+	vk::DescriptorImageInfo imageInfo;
+	imageInfo.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
+		.setImageView(view)
+		.setSampler(Context::Instance().sampler);
+
+	vk::WriteDescriptorSet writer;
+	writer.setImageInfo(imageInfo)
+		.setDstBinding(0)
+		.setDstArrayElement(0)
+		.setDstSet(set.set)
+		.setDescriptorCount(1)
+		.setDescriptorType(vk::DescriptorType::eCombinedImageSampler);
+
+	Context::Instance().device.updateDescriptorSets(writer, {});
+}
+
+std::unique_ptr<TextureManager> TextureManager::instance_ = nullptr;
+
+Texture* TextureManager::Load(const std::string& filename) {
+	std::string_view path = filename;
+	datas_.push_back(std::make_unique<Texture>(path));
+	return datas_.back().get(); 
+}
+
+void TextureManager::Clear() {
+	datas_.clear();
+}
+
+void TextureManager::Destroy(Texture* texture) {
+	auto it = std::find_if(datas_.begin(), datas_.end(), 
+		[&](const std::unique_ptr<Texture>& ptr) {
+			return ptr.get() == texture;
+		});
+
+	if (it != datas_.end()) {
+		Context::Instance().device.waitIdle();
+		datas_.erase(it);
+	}
+}
 }

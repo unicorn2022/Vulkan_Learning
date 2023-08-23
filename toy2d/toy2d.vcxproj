@@ -151,6 +151,7 @@
     <ClCompile Include="src\buffer.cpp" />
     <ClCompile Include="src\command_manager.cpp" />
     <ClCompile Include="src\context.cpp" />
+    <ClCompile Include="src\descriptor_manager.cpp" />
     <ClCompile Include="src\mymath.cpp" />
     <ClCompile Include="src\renderer.cpp" />
     <ClCompile Include="src\render_process.cpp" />
@@ -164,6 +165,7 @@
     <ClInclude Include="include\buffer.h" />
     <ClInclude Include="include\command_manager.h" />
     <ClInclude Include="include\context.h" />
+    <ClInclude Include="include\descriptor_manager.h" />
     <ClInclude Include="include\mymath.h" />
     <ClInclude Include="include\renderer.h" />
     <ClInclude Include="include\render_process.h" />
