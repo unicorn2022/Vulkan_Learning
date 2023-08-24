@@ -20,6 +20,7 @@ class Context final {
 public:
 	using GetSurfaceCallback = std::function<VkSurfaceKHR(VkInstance)>;
 	friend void Init(std::vector<const char*>&, GetSurfaceCallback, int, int);
+	friend void ResizeSwapchainImage(int w, int h);
 
 	static void Init(const std::vector<const char*> extensions, GetSurfaceCallback cb);
 	static void Quit();
@@ -64,10 +65,12 @@ public:
 	void initShaderModules();
 	// 初始化采样器
 	void initSampler();
+	// 获取窗口
+	void getSurface();
 
 private:
 	static Context* instance_;
-	vk::SurfaceKHR surface_;					// 用于显示的窗口
+	vk::SurfaceKHR surface_ = nullptr;			// 用于显示的窗口
 	GetSurfaceCallback getSurfaceCb_ = nullptr;	// 获取窗口的回调函数
 
 private:

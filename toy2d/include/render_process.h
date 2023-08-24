@@ -16,10 +16,10 @@ public:
 	RenderProcess();
 	~RenderProcess();
 	
-	// 重新创建图形渲染管线
-	void RecreateGraphicsPipeline(const Shader& shader);
-	// 重新创建渲染通道
-	void RecreateRenderPass();
+	// 创建图形渲染管线
+	void CreateGraphicsPipeline(const Shader& shader);
+	// 创建渲染通道
+	void CreateRenderPass();
 
 private:
 	// 创建渲染管线Layout

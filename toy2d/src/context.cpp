@@ -31,12 +31,8 @@ Context::Context(const std::vector<const char*> extensions, GetSurfaceCallback c
 		std::cout << "pickup physical device failed" << std::endl;
 		exit(1);
 	}
-	// 创建surface层
-	surface_ = getSurfaceCb_(instance);
-	if (!surface_) {
-		std::cout << "create surface failed" << std::endl;
-		exit(1);
-	}
+	// 获取窗口
+	getSurface();
 	// 基于物理设备, 创建逻辑设备
 	device = createDevice(surface_);
 	if (!device) {
@@ -46,6 +42,14 @@ Context::Context(const std::vector<const char*> extensions, GetSurfaceCallback c
 	// 获取命令队列
 	graphicsQueue = device.getQueue(queueInfo.graphicsIndex.value(), 0);
 	presentQueue = device.getQueue(queueInfo.presentIndex.value(), 0);
+}
+
+void Context::getSurface() {
+	surface_ = getSurfaceCb_(instance);
+	if (!surface_) {
+		std::cout << "create surface failed" << std::endl;
+		exit(1);
+	}
 }
 
 Context::~Context() {
@@ -161,7 +165,7 @@ void Context::initRenderProcess() {
 }
 
 void Context::initGraphicsPipeline() {
-	renderProcess->RecreateGraphicsPipeline(*shader);
+	renderProcess->CreateGraphicsPipeline(*shader);
 }
 
 void Context::initCommandPool() {

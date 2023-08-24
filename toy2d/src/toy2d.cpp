@@ -41,5 +41,14 @@ Renderer* GetRenderer() {
 	return renderer_.get();
 }
 
+void ResizeSwapchainImage(int w, int h) {
+	Context::Instance().device.waitIdle();	// 等待GPU执行完所有的命令
+
+	Context::Instance().swapchain.reset();
+	Context::Instance().getSurface();
+	Context::Instance().initSwapchain(w, h);
+	Context::Instance().swapchain->InitFramebuffers();
+}
+
 }
 

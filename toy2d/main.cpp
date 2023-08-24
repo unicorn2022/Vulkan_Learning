@@ -21,7 +21,7 @@ int main(int argc, char* argv[]) {
 	SDL_Window* window = SDL_CreateWindow("test",
 		SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 		1024, 720,
-		SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN);
+		SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
 
 	if (!window) {
 		SDL_Log("create window failed");
@@ -91,6 +91,12 @@ void HandleInput(MyContext& context) {
 		// 处理退出事件
 		if (event.type == SDL_QUIT) {
 			context.shouldClose = true;
+		}
+
+		// 处理窗口大小改变事件
+		if (event.type == SDL_WINDOWEVENT) {
+			if(event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED)
+				toy2d::ResizeSwapchainImage(event.window.data1, event.window.data2);
 		}
 
 		// 处理输入事件

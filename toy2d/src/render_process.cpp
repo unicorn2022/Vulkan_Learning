@@ -7,7 +7,7 @@ namespace toy2d {
 
 RenderProcess::RenderProcess() {
 	layout = createLayout();
-	renderPass = createRenderPass();
+	CreateRenderPass();
 	graphicsPipeline = nullptr;
 }
 
@@ -18,17 +18,11 @@ RenderProcess::~RenderProcess() {
 	device.destroyPipeline(graphicsPipeline);
 }
 
-void RenderProcess::RecreateGraphicsPipeline(const Shader& shader) {
-	if (graphicsPipeline) 
-		Context::Instance().device.destroyPipeline(graphicsPipeline);
-	
+void RenderProcess::CreateGraphicsPipeline(const Shader& shader) {	
 	graphicsPipeline = createGraphicsPipeline(shader);
 }
 
-void RenderProcess::RecreateRenderPass() {
-	if (renderPass) 
-		Context::Instance().device.destroyRenderPass(renderPass);
-	
+void RenderProcess::CreateRenderPass() {	
 	renderPass = createRenderPass();
 }
 
@@ -120,6 +114,14 @@ vk::Pipeline RenderProcess::createGraphicsPipeline(const Shader& shader) {
 	blendInfo.setLogicOpEnable(false)	// 是否启用逻辑运算
 		.setAttachments(attachs);		// 颜色混合附件
 	createInfo.setPColorBlendState(&blendInfo);
+
+	// 渲染管线的动态变换
+	vk::PipelineDynamicStateCreateInfo dynamicState;
+	std::array states = {
+		vk::DynamicState::eViewport,
+		vk::DynamicState::eScissor
+	};
+	dynamicState.setDynamicStates(states);
 
 	// 8. render pass & layout
 	createInfo.setRenderPass(renderPass)

@@ -94,9 +94,7 @@ DescriptorSetManager::SetInfo DescriptorSetManager::AllocImageSet() {
 	return result;
 }
 
-void DescriptorSetManager::FreeImageSet(const SetInfo& info) {
-	Context::Instance().device.freeDescriptorSets(info.pool, info.set);
-	
+void DescriptorSetManager::FreeImageSet(const SetInfo& info) {	
 	auto it = std::find_if(fulledImageSetPool_.begin(), fulledImageSetPool_.end(),
 		[&](const PoolInfo& poolInfo) {
 			return poolInfo.pool_ == info.pool;

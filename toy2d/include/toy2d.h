@@ -13,5 +13,7 @@ namespace toy2d {
 	Texture* LoadTexture(const std::string& filename);
 	void DestroyTexture(Texture* texture);
 
+	// 重新设置交换链Image的大小
+	void ResizeSwapchainImage(int w, int h);
 	Renderer* GetRenderer();
 }
