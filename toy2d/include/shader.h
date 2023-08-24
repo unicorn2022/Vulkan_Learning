@@ -16,7 +16,7 @@ public:
     // 获取shader的描述符集布局
     const std::vector<vk::DescriptorSetLayout>& GetDescriptorSetLayouts() const { return layouts_; }
     // 获取shader的PushConstant配置
-    vk::PushConstantRange GetPushConstantRange() const;
+    std::vector<vk::PushConstantRange> GetPushConstantRange() const;
 
 private:
     vk::ShaderModule vertexModule_; // 顶点着色器模块

@@ -37,15 +37,11 @@ void Shader::initDescriptorSetLayouts() {
 	// 2 个 Binding: 
 	//	vertex shader 的 uniform buffer: view, project
 	//	fragment shader 的 uniform buffer: color
-	std::vector<vk::DescriptorSetLayoutBinding> bindings(2);
+	std::vector<vk::DescriptorSetLayoutBinding> bindings(1);
 	bindings[0].setBinding(0)
 		.setDescriptorCount(1)
 		.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 		.setStageFlags(vk::ShaderStageFlagBits::eVertex);
-	bindings[1].setBinding(1)
-		.setDescriptorCount(1)
-		.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-		.setStageFlags(vk::ShaderStageFlagBits::eFragment);
 	createInfo.setBindings(bindings);
 	// 创建描述符集布局
 	layouts_.push_back(Context::Instance().device.createDescriptorSetLayout(createInfo));
@@ -63,12 +59,15 @@ void Shader::initDescriptorSetLayouts() {
 	layouts_.push_back(Context::Instance().device.createDescriptorSetLayout(createInfo));
 }
 
-vk::PushConstantRange Shader::GetPushConstantRange() const {
-	vk::PushConstantRange range;
-	range.setOffset(0)			// 偏移量
+std::vector<vk::PushConstantRange> Shader::GetPushConstantRange() const {
+	std::vector<vk::PushConstantRange> ranges(2);
+	ranges[0].setOffset(0)		// 偏移量
 		.setSize(sizeof(Mat4))	// 大小
-		.setStageFlags(vk::ShaderStageFlagBits::eVertex);	// 作用阶段
-	return range;
+		.setStageFlags(vk::ShaderStageFlagBits::eVertex); // 作用阶段
+	ranges[1].setOffset(sizeof(Mat4))
+		.setSize(sizeof(Color))
+		.setStageFlags(vk::ShaderStageFlagBits::eFragment);
+	return ranges;
 }
 
 }

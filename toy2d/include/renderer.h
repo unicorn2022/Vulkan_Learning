@@ -92,13 +92,12 @@ private:
 	
 	/* uniform数据 */
 	std::vector<std::unique_ptr<Buffer>> uniformBuffers_;		// uniform缓冲区
-	std::vector<std::unique_ptr<Buffer>> colorBuffers_;			// 颜色缓冲区
 	std::vector<std::unique_ptr<Buffer>> deviceUniformBuffers_;	// (GPU)uniform缓冲区
-	std::vector<std::unique_ptr<Buffer>> deviceColorBuffers_;	// (GPU)颜色缓冲区
-
+	
 	/* 纹理 */
 	std::vector<DescriptorSetManager::SetInfo> descriptorSets_;	// uniform变量对应的描述符集
 	vk::Sampler sampler;	// 纹理采样器
 	Texture* whiteTexture;	// 白色纹理
+	Color drawColor_ = { 1, 1, 1 };	// 绘制颜色
 };
 }

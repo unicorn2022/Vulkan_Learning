@@ -63,7 +63,6 @@ void MainLoop() {
 	context.x = 100;
 	context.y = 100;
 	context.renderer = toy2d::GetRenderer();
-	context.renderer->SetDrawColor(toy2d::Color{ 1, 1, 1 });
 	context.texture1 = toy2d::LoadTexture("./img/avatar.png");
 	context.texture2 = toy2d::LoadTexture("./img/role.png");
 
@@ -73,14 +72,17 @@ void MainLoop() {
        
 		// »æÖÆ¾ØÐÎ
 		context.renderer->StartRender();
+		context.renderer->SetDrawColor(toy2d::Color{ 1, 0, 0 });
 		context.renderer->DrawTexture(toy2d::Rect{
 			toy2d::Vec{context.x, context.y},
 			toy2d::Size{200, 300} 
 		}, *context.texture1);
+		context.renderer->SetDrawColor(toy2d::Color{ 0, 1, 0 });
 		context.renderer->DrawTexture(toy2d::Rect{
 			toy2d::Vec{500, 100},
 			toy2d::Size{200, 300}
 			}, *context.texture2);
+		context.renderer->SetDrawColor(toy2d::Color{ 0, 0, 1 });
 		context.renderer->DrawLine(
 			toy2d::Vec{ 0,0 },
 			toy2d::Vec{ WindowWidth, WindowHeight }
@@ -119,27 +121,6 @@ void HandleInput(MyContext& context) {
 			}
 			if (event.key.keysym.sym == SDLK_s) {
 				context.y += 10;
-			}
-			if (event.key.keysym.sym == SDLK_1) {
-				context.renderer->SetDrawColor(toy2d::Color{ 0, 0, 1 });
-			}
-			if (event.key.keysym.sym == SDLK_2) {
-				context.renderer->SetDrawColor(toy2d::Color{ 0, 1, 0 });
-			}
-			if (event.key.keysym.sym == SDLK_3) {
-				context.renderer->SetDrawColor(toy2d::Color{ 0, 1, 1 });
-			}
-			if (event.key.keysym.sym == SDLK_4) {
-				context.renderer->SetDrawColor(toy2d::Color{ 1, 0, 0 });
-			}
-			if (event.key.keysym.sym == SDLK_5) {
-				context.renderer->SetDrawColor(toy2d::Color{ 1, 0, 1 });
-			}
-			if (event.key.keysym.sym == SDLK_6) {
-				context.renderer->SetDrawColor(toy2d::Color{ 1, 1, 0 });
-			}
-			if (event.key.keysym.sym == SDLK_7) {
-				context.renderer->SetDrawColor(toy2d::Color{ 1, 1, 1 });
 			}
 			if (event.key.keysym.sym == SDLK_ESCAPE) {
 				context.shouldClose = true;

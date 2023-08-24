@@ -23,7 +23,7 @@ Renderer::Renderer(int maxFlightCount){
 	
 	initMats();							// 初始化MVP矩阵
 	createWhiteTexture();				// 创建白色纹理
-	SetDrawColor(Color({ 0, 0, 0 }));	// 设置绘制颜色
+	SetDrawColor(Color({ 1, 1, 1 }));	// 设置绘制颜色
 }
 
 Renderer::~Renderer(){
@@ -33,7 +33,6 @@ Renderer::~Renderer(){
 	rectVerticesBuffer_.reset();
 	rectIndicesBuffer_.reset();
 	uniformBuffers_.clear();
-	colorBuffers_.clear();
 
 	for (auto& sem : imageAvaliableSems_) 
 		device.destroySemaphore(sem);
@@ -72,6 +71,7 @@ void Renderer::DrawTexture(const Rect& rect, Texture& texture) {
 	// 3.2.4 传输push constanst
 	auto model = Mat4::CreateTranslate(rect.position).Mul(Mat4::CreateScale(rect.size));
 	cmd.pushConstants(layout, vk::ShaderStageFlagBits::eVertex, 0, sizeof(Mat4), model.GetData());
+	cmd.pushConstants(layout, vk::ShaderStageFlagBits::eFragment, sizeof(Mat4), sizeof(Color), &drawColor_);
 	
 	// 3.2.4 绘制三角形
 	cmd.drawIndexed(6, 1, 0, 0, 0);
@@ -104,6 +104,7 @@ void Renderer::DrawLine(const Vec& p1, const Vec& p2) {
 	// 3.2.4 传输push constanst
 	auto model = Mat4::CreateIdentity();
 	cmd.pushConstants(layout, vk::ShaderStageFlagBits::eVertex, 0, sizeof(Mat4), model.GetData());
+	cmd.pushConstants(layout, vk::ShaderStageFlagBits::eFragment, sizeof(Mat4), sizeof(Color), &drawColor_);
 
 	// 3.2.4 绘制直线
 	cmd.draw(2, 1, 0, 0);
@@ -249,25 +250,6 @@ void Renderer::createUniformBuffer(int flightCount) {
 			vk::MemoryPropertyFlagBits::eDeviceLocal // GPU专用
 		));
 	}
-
-	// 1个Color
-	size = sizeof(Color);
-	colorBuffers_.resize(flightCount);
-	for (auto& buffer : colorBuffers_) {
-		buffer.reset(new Buffer(
-			vk::BufferUsageFlagBits::eTransferSrc,
-			size,
-			vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent // CPU可见, CPU与GPU共享
-		));
-	}
-	deviceColorBuffers_.resize(flightCount);
-	for (auto& buffer : deviceColorBuffers_) {
-		buffer.reset(new Buffer(
-			vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eUniformBuffer,
-			size,
-			vk::MemoryPropertyFlagBits::eDeviceLocal // GPU专用
-		));
-	}
 }
 
 void Renderer::transformBuffer2Device(Buffer& src, Buffer& dst, size_t srcOffset, size_t dstOffset, size_t size) {
@@ -340,11 +322,7 @@ void Renderer::bufferMVPData() {
 }
 
 void Renderer::SetDrawColor(const Color& color){
-	for (int i = 0; i < colorBuffers_.size(); i++) {
-		auto& buffer = colorBuffers_[i];
-		memcpy(buffer->map, (void*)&color, sizeof(float) * 3);
-		transformBuffer2Device(*buffer, *deviceColorBuffers_[i], 0, 0, buffer->size);
-	}
+	drawColor_ = color;
 }
 
 void Renderer::initMats() {
@@ -365,26 +343,13 @@ void Renderer::updateDescriptorSets() {
 			.setOffset(0)
 			.setRange(sizeof(Mat4) * 2);
 
-		std::vector<vk::WriteDescriptorSet> writeInfos(2);
+		std::vector<vk::WriteDescriptorSet> writeInfos(1);
 		writeInfos[0].setBufferInfo(bufferInfo1)// 关联的buffer
 			.setDstBinding(0)					// 和哪个binding关联
 			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 			.setDescriptorCount(1)				// 描述符子个数
 			.setDstArrayElement(0)				// 描述符集中的第几个描述符子
 			.setDstSet(descriptorSets_[i].set);	// 和哪个描述符集关联
-
-		// 绑定颜色 uniform buffer
-		vk::DescriptorBufferInfo bufferInfo2;
-		bufferInfo2.setBuffer(deviceColorBuffers_[i]->buffer)
-			.setOffset(0)
-			.setRange(sizeof(Color));
-
-		writeInfos[1].setBufferInfo(bufferInfo2)	// 关联的buffer
-			.setDstBinding(1)						// 和哪个binding关联
-			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-			.setDescriptorCount(1)					// 描述符子个数
-			.setDstArrayElement(0)					// 描述符集中的第几个描述符子
-			.setDstSet(descriptorSets_[i].set);		// 和哪个描述符集关联
 
 		Context::Instance().device.updateDescriptorSets(writeInfos, {});
 	}
