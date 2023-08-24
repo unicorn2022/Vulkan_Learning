@@ -13,7 +13,10 @@ class TextureManager;
 class Texture final {
 public:
 	friend class TextureManager;
+	// 从文件中加载纹理
 	Texture(std::string_view filename);
+	// 从内存中加载纹理
+	Texture(void* data, uint32_t w, uint32_t h);
 	~Texture();
 
 public:
@@ -39,6 +42,8 @@ private:
 	void transitionImageLayoutFromDst2Optimal();
 	// 更新描述符集
 	void updateDescriptorSet();
+	// 创建纹理
+	void init(void* data, uint32_t w, uint32_t h);
 };
 
 class TextureManager final {
@@ -48,7 +53,10 @@ public:
 		return *instance_;
 	}
 
+	// 从文件中加载纹理
 	Texture* Load(const std::string& filename);
+	// 从内存中创建纹理
+	Texture* Create(void* data, uint32_t w, uint32_t h);
 	void Destroy(Texture* texture);
 	void Clear();
 

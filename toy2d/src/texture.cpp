@@ -12,6 +12,17 @@ Texture::Texture(std::string_view filename) {
 	if (!pixels)
 		throw std::runtime_error("image load failed");
 
+	init(pixels, w, h);
+
+	// 释放图形数据
+	stbi_image_free(pixels);
+}
+
+Texture::Texture(void* data, uint32_t w, uint32_t h) {
+	init(data, w, h);
+}
+
+void Texture::init(void* data, uint32_t w, uint32_t h) {
 	// 将图形数据放到buffer中
 	size_t size = w * h * 4;
 	std::unique_ptr<Buffer> buffer(new Buffer(
@@ -19,7 +30,7 @@ Texture::Texture(std::string_view filename) {
 		size,
 		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent
 	));
-	memcpy(buffer->map, pixels, size);
+	memcpy(buffer->map, data, size);
 
 	// 创建Image
 	createImage(w, h);
@@ -38,13 +49,11 @@ Texture::Texture(std::string_view filename) {
 	// 创建ImageView
 	createImageView();
 
-	// 释放图形数据
-	stbi_image_free(pixels);
-
 	// 申请descriptor set
 	set = DescriptorSetManager::Instance().AllocImageSet();
 	updateDescriptorSet();
 }
+
 
 Texture::~Texture() {
 	DescriptorSetManager::Instance().FreeImageSet(set);
@@ -195,9 +204,13 @@ void Texture::updateDescriptorSet() {
 std::unique_ptr<TextureManager> TextureManager::instance_ = nullptr;
 
 Texture* TextureManager::Load(const std::string& filename) {
-	std::string_view path = filename;
-	datas_.push_back(std::make_unique<Texture>(path));
+	datas_.push_back(std::make_unique<Texture>(filename));
 	return datas_.back().get(); 
+}
+
+Texture* TextureManager::Create(void* data, uint32_t w, uint32_t h) {
+	datas_.push_back(std::make_unique<Texture>(data, w, h));
+	return datas_.back().get();
 }
 
 void TextureManager::Clear() {

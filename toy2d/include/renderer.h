@@ -18,6 +18,7 @@ public:
 
 	void SetProject(int right, int left, int bottom, int top, int far, int near);
 	void DrawTexture(const Rect&, Texture& texture);
+	void DrawLine(const Vec& p1, const Vec& p2);
 	void SetDrawColor(const Color&);
 
 	void StartRender();
@@ -46,12 +47,14 @@ private:
 	/* 将数据传送给GPU */
 	// 初始化MVP矩阵
 	void initMats();
-	// 传输数据
-	void bufferData();
-	// 传输vertex数据
-	void bufferVertexData();
-	// 传输index数据
-	void bufferIndicesData();
+	// 传输矩形数据
+	void bufferRectData();
+	// 传输矩形vertex数据
+	void bufferRectVertexData();
+	// 传输矩形index数据
+	void bufferRectIndicesData();
+	// 传输线段vertex数据
+	void bufferLineData(const Vec& p1, const Vec& p2);
 	// 传输MVP矩阵
 	void bufferMVPData();
 
@@ -64,6 +67,8 @@ private:
 	void transformBuffer2Device(Buffer& src, Buffer& dst, size_t srcOffset, size_t dstOffset, size_t size);
 	// 查询内存类型索引
 	std::uint32_t queryBufferMemTypeIndex(std::uint32_t, vk::MemoryPropertyFlags);
+	// 创建白色纹理
+	void createWhiteTexture();
 
 private:
 	int maxFlightCount_;	// 最大同时渲染帧数
@@ -77,8 +82,9 @@ private:
 	std::vector<vk::CommandBuffer> cmdBufs_;		// 命令缓冲区
 
 	/* 顶点数据 */
-	std::unique_ptr<Buffer> verticesBuffer_;	// 顶点缓冲区
-	std::unique_ptr<Buffer> indicesBuffer_;		// 索引缓冲区
+	std::unique_ptr<Buffer> rectVerticesBuffer_;	// (矩形)顶点缓冲区
+	std::unique_ptr<Buffer> rectIndicesBuffer_;		// (矩形)索引缓冲区
+	std::unique_ptr<Buffer> lineVerticesBuffer_;	// (线段)顶点缓冲区
 
 	/* 变换矩阵 */
 	Mat4 projectMat_;
@@ -93,5 +99,6 @@ private:
 	/* 纹理 */
 	std::vector<DescriptorSetManager::SetInfo> descriptorSets_;	// uniform变量对应的描述符集
 	vk::Sampler sampler;	// 纹理采样器
+	Texture* whiteTexture;	// 白色纹理
 };
 }

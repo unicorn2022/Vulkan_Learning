@@ -3,6 +3,9 @@
 #include "SDL2/SDL_vulkan.h"
 #include <SDL2/SDL_video.h>
 
+constexpr uint32_t WindowWidth = 1024;
+constexpr uint32_t WindowHeight = 720;
+
 struct MyContext {
 	bool shouldClose = false;
 	float x, y; 
@@ -20,7 +23,7 @@ int main(int argc, char* argv[]) {
 	// ´´½¨SDL´°¿Ú
 	SDL_Window* window = SDL_CreateWindow("test",
 		SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-		1024, 720,
+		WindowWidth, WindowHeight,
 		SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
 
 	if (!window) {
@@ -78,6 +81,10 @@ void MainLoop() {
 			toy2d::Vec{500, 100},
 			toy2d::Size{200, 300}
 			}, *context.texture2);
+		context.renderer->DrawLine(
+			toy2d::Vec{ 0,0 },
+			toy2d::Vec{ WindowWidth, WindowHeight }
+		);
 		context.renderer->EndRender();
     }
 

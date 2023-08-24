@@ -8,18 +8,21 @@ namespace toy2d {
 RenderProcess::RenderProcess() {
 	layout = createLayout();
 	CreateRenderPass();
-	graphicsPipeline = nullptr;
+	graphicsPipelineWithTriangleTopology = nullptr;
 }
 
 RenderProcess::~RenderProcess() {
 	auto& device = Context::Instance().device;
+	device.destroyPipelineCache(pipelineCache_);
 	device.destroyRenderPass(renderPass);
 	device.destroyPipelineLayout(layout);
-	device.destroyPipeline(graphicsPipeline);
+	device.destroyPipeline(graphicsPipelineWithTriangleTopology);
+	device.destroyPipeline(graphicsPipelineWithLineTopology);
 }
 
 void RenderProcess::CreateGraphicsPipeline(const Shader& shader) {	
-	graphicsPipeline = createGraphicsPipeline(shader);
+	graphicsPipelineWithTriangleTopology = createGraphicsPipeline(shader, vk::PrimitiveTopology::eTriangleList);
+	graphicsPipelineWithLineTopology = createGraphicsPipeline(shader, vk::PrimitiveTopology::eLineList);
 }
 
 void RenderProcess::CreateRenderPass() {	
@@ -36,7 +39,7 @@ vk::PipelineLayout RenderProcess::createLayout() {
 	return Context::Instance().device.createPipelineLayout(createInfo);
 }
 
-vk::Pipeline RenderProcess::createGraphicsPipeline(const Shader& shader) {
+vk::Pipeline RenderProcess::createGraphicsPipeline(const Shader& shader, vk::PrimitiveTopology topology) {
 	/* 流水线配置 */
 	vk::GraphicsPipelineCreateInfo createInfo;
 
@@ -61,7 +64,7 @@ vk::Pipeline RenderProcess::createGraphicsPipeline(const Shader& shader) {
 	// 2. 顶点聚集
 	vk::PipelineInputAssemblyStateCreateInfo inputAssembly;
 	inputAssembly.setPrimitiveRestartEnable(false)
-		.setTopology(vk::PrimitiveTopology::eTriangleList); // 顶点的聚集方式: 123, 456, 789
+		.setTopology(topology);	// 顶点的拓扑结构(聚集方式)
 	createInfo.setPInputAssemblyState(&inputAssembly);
 
 	// 3. 视口变换 & 裁剪
@@ -115,7 +118,7 @@ vk::Pipeline RenderProcess::createGraphicsPipeline(const Shader& shader) {
 		.setAttachments(attachs);		// 颜色混合附件
 	createInfo.setPColorBlendState(&blendInfo);
 
-	// 渲染管线的动态变换
+	// 渲染管线的动态部分
 	vk::PipelineDynamicStateCreateInfo dynamicState;
 	std::array states = {
 		vk::DynamicState::eViewport,
@@ -126,10 +129,11 @@ vk::Pipeline RenderProcess::createGraphicsPipeline(const Shader& shader) {
 	// 8. render pass & layout
 	createInfo.setRenderPass(renderPass)
 		.setLayout(layout);
+		//.setPDynamicState(&dynamicState); // 设置管线的动态部分
 
 
 	/* 创建 pipeline */
-	auto result = Context::Instance().device.createGraphicsPipeline(nullptr, createInfo);
+	auto result = Context::Instance().device.createGraphicsPipeline(pipelineCache_, createInfo);
 	if (result.result != vk::Result::eSuccess) {
 		std::cout << "create graphics pipeline failed: " << result.result << std::endl;
 	}
@@ -171,6 +175,13 @@ vk::RenderPass RenderProcess::createRenderPass() {
 
 	/* 创建渲染流程 */
 	return Context::Instance().device.createRenderPass(createInfo);
+}
+
+vk::PipelineCache RenderProcess::createPipelineCache() {
+	vk::PipelineCacheCreateInfo createInfo;
+	createInfo.setInitialDataSize(0);
+
+	return Context::Instance().device.createPipelineCache(createInfo);
 }
 
 }

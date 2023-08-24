@@ -15,13 +15,14 @@ Renderer::Renderer(int maxFlightCount){
 	
 	createBuffers();						// 创建缓冲区
 	createUniformBuffer(maxFlightCount);	// 创建Uniform缓冲区
-	bufferData();							// 将数据拷贝到缓冲区
+	bufferRectData();							// 将数据拷贝到缓冲区
 	
 	descriptorSets_ = DescriptorSetManager::Instance().AllocBufferSets(maxFlightCount);
 	updateDescriptorSets();					// 更新描述符集, 将Uniform缓冲区绑定到描述符集
 
 	
 	initMats();							// 初始化MVP矩阵
+	createWhiteTexture();				// 创建白色纹理
 	SetDrawColor(Color({ 0, 0, 0 }));	// 设置绘制颜色
 }
 
@@ -29,8 +30,8 @@ Renderer::~Renderer(){
 	auto& device = Context::Instance().device;
 	
 	device.destroySampler(sampler);
-	verticesBuffer_.reset();
-	indicesBuffer_.reset();
+	rectVerticesBuffer_.reset();
+	rectIndicesBuffer_.reset();
 	uniformBuffers_.clear();
 	colorBuffers_.clear();
 
@@ -44,19 +45,26 @@ Renderer::~Renderer(){
 }
 
 void Renderer::DrawTexture(const Rect& rect, Texture& texture) {
+	auto& ctx = Context::Instance();
 	auto& device = Context::Instance().device;
 	auto& cmd = cmdBufs_[curFrame_];
 
+	bufferRectData();
+
+	// 3.2.1 绑定 Pipeline
+	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, ctx.renderProcess->graphicsPipelineWithTriangleTopology);
+
 	// 3.2.2 绑定vertex&index缓冲区
 	vk::DeviceSize offset = 0;
-	cmd.bindVertexBuffers(0, verticesBuffer_->buffer, offset);
-	cmd.bindIndexBuffer(indicesBuffer_->buffer, 0, vk::IndexType::eUint32);
+	cmd.bindVertexBuffers(0, rectVerticesBuffer_->buffer, offset);
+	cmd.bindIndexBuffer(rectIndicesBuffer_->buffer, 0, vk::IndexType::eUint32);
 	
 	// 3.2.3 绑定描述符集(uniform)
 	auto& layout = Context::Instance().renderProcess->layout;
 	cmd.bindDescriptorSets(
 		vk::PipelineBindPoint::eGraphics, 
-		layout, 0, 
+		layout, 
+		0,	// 描述符集的偏移量
 		{ descriptorSets_[curFrame_].set, texture.set.set }, // uniform变量的set, 纹理的set
 		{}
 	);
@@ -67,6 +75,38 @@ void Renderer::DrawTexture(const Rect& rect, Texture& texture) {
 	
 	// 3.2.4 绘制三角形
 	cmd.drawIndexed(6, 1, 0, 0, 0);
+}
+
+void Renderer::DrawLine(const Vec& p1, const Vec& p2) {
+	auto& ctx = Context::Instance();
+	auto& device = Context::Instance().device;
+	auto& cmd = cmdBufs_[curFrame_];
+
+	bufferLineData(p1, p2);
+
+	// 3.2.1 绑定 Pipeline
+	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, ctx.renderProcess->graphicsPipelineWithLineTopology);
+
+	// 3.2.2 绑定vertex缓冲区
+	vk::DeviceSize offset = 0;
+	cmd.bindVertexBuffers(0, lineVerticesBuffer_->buffer, offset);
+	
+	// 3.2.3 绑定描述符集(uniform)
+	auto& layout = Context::Instance().renderProcess->layout;
+	cmd.bindDescriptorSets(
+		vk::PipelineBindPoint::eGraphics,
+		layout,
+		0,	// 描述符集的偏移量
+		{ descriptorSets_[curFrame_].set, whiteTexture->set.set }, // uniform变量的set, 纹理的set
+		{}
+	);
+
+	// 3.2.4 传输push constanst
+	auto model = Mat4::CreateIdentity();
+	cmd.pushConstants(layout, vk::ShaderStageFlagBits::eVertex, 0, sizeof(Mat4), model.GetData());
+
+	// 3.2.4 绘制直线
+	cmd.draw(2, 1, 0, 0);
 }
 
 void Renderer::StartRender() {
@@ -113,10 +153,6 @@ void Renderer::StartRender() {
 
 	// 3.2 开始渲染流程
 	cmd.beginRenderPass(&renderPassBeginInfo, vk::SubpassContents::eInline);
-		
-	// 3.2.1 绑定 Pipeline
-	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, renderProcess->graphicsPipeline);
-
 }
 
 void Renderer::EndRender() {
@@ -177,14 +213,19 @@ void Renderer::createCmdBuffers() {
 }
 
 void Renderer::createBuffers() {
-	verticesBuffer_.reset(new Buffer(
+	rectVerticesBuffer_.reset(new Buffer(
 		vk::BufferUsageFlagBits::eVertexBuffer,
 		sizeof(Vertex) * 4,
 		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent // CPU可见, CPU与GPU共享
 	));
-	indicesBuffer_.reset(new Buffer(
+	rectIndicesBuffer_.reset(new Buffer(
 		vk::BufferUsageFlagBits::eIndexBuffer,
 		sizeof(uint32_t) * 6,
+		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent // CPU可见, CPU与GPU共享
+	));
+	lineVerticesBuffer_.reset(new Buffer(
+		vk::BufferUsageFlagBits::eVertexBuffer,
+		sizeof(Vertex) * 2,
 		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent // CPU可见, CPU与GPU共享
 	));
 }
@@ -253,27 +294,35 @@ std::uint32_t Renderer::queryBufferMemTypeIndex(std::uint32_t type, vk::MemoryPr
 	return 0;
 }
 
-void Renderer::bufferData() {
-	bufferVertexData();
-	bufferIndicesData();
+void Renderer::bufferRectData() {
+	bufferRectVertexData();
+	bufferRectIndicesData();
 }
 
-void Renderer::bufferVertexData() {
+void Renderer::bufferRectVertexData() {
 	Vertex vertices[] = {
 		{Vec{-0.5, -0.5}, Vec{0, 0}},
 		{Vec{0.5, -0.5} , Vec{1, 0}},
 		{Vec{0.5, 0.5}  , Vec{1, 1}},
 		{Vec{-0.5, 0.5} , Vec{0, 1}},
 	};
-	memcpy(verticesBuffer_->map, vertices, sizeof(vertices));
+	memcpy(rectVerticesBuffer_->map, vertices, sizeof(vertices));
 }
 
-void Renderer::bufferIndicesData() {
+void Renderer::bufferRectIndicesData() {
 	std::uint32_t indices[] = {
 		0, 1, 3,
 		1, 2, 3,
 	};
-	memcpy(indicesBuffer_->map, indices, sizeof(indices));
+	memcpy(rectIndicesBuffer_->map, indices, sizeof(indices));
+}
+
+void Renderer::bufferLineData(const Vec& p1, const Vec& p2) {
+	Vertex vertices[] = {
+		{p1, Vec{0, 0}},
+		{p2, Vec{0, 0}}
+	};
+	memcpy(lineVerticesBuffer_->map, vertices, sizeof(vertices));
 }
 
 void Renderer::bufferMVPData() {
@@ -339,6 +388,11 @@ void Renderer::updateDescriptorSets() {
 
 		Context::Instance().device.updateDescriptorSets(writeInfos, {});
 	}
+}
+
+void Renderer::createWhiteTexture() {
+	unsigned char data[] = { 0xFF, 0xFF, 0xFF, 0xFF };
+	whiteTexture = TextureManager::Instance().Create((void*)data, 1, 1);
 }
 
 }
